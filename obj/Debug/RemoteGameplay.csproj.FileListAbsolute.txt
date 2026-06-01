@@ -1,0 +1,8 @@
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\Release\RemoteGameplay.deps.json
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\Release\RemoteGameplay.dll
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\obj\Debug\RemoteGameplay.csproj.AssemblyReference.cache
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\obj\Debug\RemoteGameplay.GeneratedMSBuildEditorConfig.editorconfig
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\obj\Debug\RemoteGameplay.csproj.CoreCompileInputs.cache
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\obj\Debug\RemoteGameplay.dll
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\obj\Debug\refint\RemoteGameplay.dll
+E:\Games\Lethe\BepInEx\cs-stuff\RemoteGameplay\obj\Debug\ref\RemoteGameplay.dll

@@ -1,0 +1,17 @@
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\LetheTypescript.deps.json
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\LetheTypescript.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\ClearScript.Core.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\ClearScript.V8.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\ClearScript.V8.ICUData.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\ClearScript.Windows.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\ClearScript.Windows.Core.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\Newtonsoft.Json.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\runtimes\win-x64\native\ClearScriptV8.win-x64.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\Release\runtimes\win-x86\native\ClearScriptV8.win-x86.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\LetheTypescript.csproj.AssemblyReference.cache
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\LetheTypescript.GeneratedMSBuildEditorConfig.editorconfig
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\LetheTypescript.csproj.CoreCompileInputs.cache
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\LetheTyp.BEB2B95A.Up2Date
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\LetheTypescript.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\refint\LetheTypescript.dll
+E:\Games\Lethe\BepInEx\cs-stuff\TypescriptEditing\obj\Debug\ref\LetheTypescript.dll
