@@ -17,7 +17,7 @@ type MultiTarget = SingleTarget | anyString<
 >
 
 type Sin = {
-	caps: "CRIMSON" | "SCARLET" | "AMBER" | "SHAMROCK" | "AZURE" | "INDIGO" | "VIOLET"
+	caps: "CRIMSON" | "SCARLET" | "AMBER" | "SHAMROCK" | "AZURE" | "INDIGO" | "VIOLET" | "WHITE" | "BLACK" | "RED" | "PALE" | "NEUTRAL"
 	number: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11
 }
 type AttackType = {
@@ -243,9 +243,8 @@ type AcquisitionFunctions = {
 	/**
 	Returns skill's offense level.
 	@param var_1 `Self` | `Target`
-	@param var_2 `VALUE_#` | any integer (Coin Index, starts at 0. If the index is out of range, checks the last coin instead.)
 	*/
-	getskillatklevel(var_1: "Self" | "Target", var_2: number): number
+	getskillatklevel(var_1: "Self" | "Target"): number
 
 	/**
 	Returns the unit's offense level + skill offense level
@@ -263,7 +262,7 @@ type AcquisitionFunctions = {
 	Returns skill sin, Wrath = 0, Lust = 1, Sloth = 2, Gluttony =3, Gloom = 4, Pride = 5, Envy = 6, White = 7, Black = 8, Red = 9, Pale = 10, Neutral = 11.
 	@param var_1 `Self` | `Target` | `replaced` (replaced: If used with a Defense Skill: Provides the Skill ID of the covered Skill)
 	*/
-	getskillattribute(var_1: number): number
+	getskillattribute(var_1: "Self" | "Target" | "replaced"): number
 
 	/**
 	Returns Defense Type, None = 0, Guard = 1, Evade = 2, Counter = 3, Attack = 4, Non_Action = 5. (Non_action is only used once and by the panic skill)
@@ -275,7 +274,7 @@ type AcquisitionFunctions = {
 	Returns the tier of the target's skill
 	@param var_1 `Self` | `Target` | `replaced` (replaced: If used with a Defense Skill: Provides the Skill ID of the covered Skill)
 	*/
-	getskillrank(var_1: number): number
+	getskillrank(var_1: "Self" | "Target" | "replaced"): number
 
 	/**
 	Returns Ego Type, Skill = 0, Awaken = 1, Corrosion = 2, Corrosion Unstable = 3, Corrosion Stable = 4, Upgrade = 5, 6 = None.
@@ -354,7 +353,7 @@ type AcquisitionFunctions = {
 	@param var_1 See [Single-Target](https://rentry.co/glitchscript#target-arguments)
 	@param var_2 `deployment` | `deadAllyCount` | `res????` | `panicType` | `isRetreated` | `speedMin` | `hasMp` | `deflevel` |
 	*/
-	getstat(var_1: SingleTarget, var_2: "deployment" | "deadAllyCount" | `res${Sin["caps"] | AttackType["caps"]}` | "panicType" | "isRetreated" | "speedMin" | "hasMp" | "deflevel"): number
+	getstat(var_1: SingleTarget, var_2: "deployment" | "deadAllyCount" | `res${Sin["caps"] | AttackType["caps"]}` | "panicType" | "isRetreated" | "speedMin" | "speedMax" | "speedMinOG" | "speedMaxOG" | "hasMp" | "deflevel"): number
 
 	/**
 	No Description Provided
@@ -461,7 +460,7 @@ type AcquisitionFunctions = {
 	@param var_1 See [Single-Target](https://rentry.co/glitchscript#target-arguments)
 	@param var_2 Sin Affinity: `CRIMSON` | `SCARLET` | `AMBER` | `SHAMROCK` | `AZURE` | `INDIGO` | `VIOLET`
 	*/
-	getatkres(var_1: SingleTarget, var_2: Sin["caps"]): number
+	getatkres(var_1: SingleTarget, var_2: Sin["caps"] | AttackType["caps"]): number
 
 	/**
 	Returns:
@@ -484,7 +483,7 @@ type AcquisitionFunctions = {
 	Returns `0` for any enemy
 	@param var_1 See [Single-Target](https://rentry.co/glitchscript#target-arguments)
 	*/
-	getunitfaction(var_1: SingleTarget): number
+	getunitfaction(var_1: SingleTarget): 0 | 1
 
 	/**
 	Returns an integer representing the status of the chain of Skills on the Dashboard.
@@ -1018,7 +1017,7 @@ type ConsequenceFunctions = {
 	Changes the Sin Affinity of a Skill on usage of said Skill.
 	@param var_1 Sin Affinity | (i.e AZURE, AMBER, BLACK, WHITE, etc.)
 	*/
-	changeaffinity(var_1: "Sin Affinity" | "(i.e AZURE, AMBER, BLACK, WHITE, etc.)"): void
+	changeaffinity(var_1: Sin["caps"]): void
 
 	/**
 	Overrides an attack's resistance value.
@@ -1132,7 +1131,7 @@ type ConsequenceFunctions = {
 	Changes the Skill's attack type (E.X Slash) into the value specified in `var_1`. This allows for you to mimic rien's changing damage types for example.
 	@param var_1 Attack Type | `HIT`, `PENETRATE`, or `SLASH`
 	*/
-	changeatktype(var_1: "Attack Type" | "HIT"): void
+	changeatktype(var_1: "HIT" | "PENETRATE" | "SLASH"): void
 
 	/**
 	adds/removes a skill's atkweight, positive numbers increase attack weight, negatives reduce. (CAN'T BE DONE MIDCOMBAT WITH TIMINGS LIKE WHENUSE)

@@ -2,6 +2,8 @@
 using Microsoft.ClearScript.V8;
 using Microsoft.ClearScript.JavaScript;
 
+
+
 using System;
 using System.IO;
 using System.Collections.Generic;
@@ -19,8 +21,13 @@ namespace LetheJavascript.Classes;
 
 public class LoadedModule
 {
+    public LoadedModule(V8ScriptEngine engine)
+    {
+        this.engine = engine;
+    }
     public V8ScriptEngine engine { get; init; }
     public ScriptObject exports;
+    public string modFolder;
 
     public void Dispose() => engine.Dispose();
 }
@@ -52,7 +59,7 @@ public class IO
         this.pathCache = new() {
             {"mod://", modFolder},
             {"plugins://", Paths.PluginPath},
-            {"./", this.javascriptFolder}
+            {"./", javascriptFolder}
         };
     }
     private readonly string modFolder;
@@ -171,6 +178,9 @@ public class ScriptRuntime
     #endregion
     public PropertyBag mdlFunctions = new();
 
+    // ts is laced and that damn dog got it im so sorry.
+    private const string EXTERNAL_UTILITY_JS = """var __spreadArray=this&&this.__spreadArray||function(r,n,u){if(u||arguments.length===2)for(var e=0,t=n.length,a;e<t;e++)(a||!(e in n))&&(a||(a=Array.prototype.slice.call(n,0,e)),a[e]=n[e]);return r.concat(a||Array.prototype.slice.call(n))};function property(r,n){return n(r)}var Unit=(function(){function r(n){var u=this;switch(this.target=n,this.speed=property(this,function(e){return{get min(){return Mdl.getstat(e.target,"speedMin")},get max(){return Mdl.getstat(e.target,"speedMax")},get current(){return Mdl.getspeed(e.target)},getSlotSpeed:function(t){return Mdl.getspeed(e.target,t)}}}),this.stagger=property(this,function(e){return{addAt:function(t){Mdl.breakaddbar(e.target,t)},tremorBurst:function(t,a){Mdl.burst(e.target,t??1),a&&Mdl.buff(e.target,"Vibration",0,-a,0)},staggerDamage:function(t,a){Modular.breakdmg(e.target,t??1,a)},instantStagger:function(t){Mdl.break(e.target,t)},recover:function(){Mdl.breakrecover(e.target)},getThresholds:function(){return new Array(Mdl.getbreakcount(e.target)).fill(null).map(function(t,a){Mdl.getbreakvalue(e.target,a)})}}}),this.buff=property(this,function(e){return{get:function(t){return{potency:Mdl.getbuff(e.target,t,"stack"),count:Mdl.getbuff(e.target,t,"turn"),consumed:Mdl.getbuff(e.target,t,"consumed")}},inflict:function(t,a,l,i,o){var g=i==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[i];Mdl.buff(e.target,t,a,l,g,o?"use":void 0)},getCount:function(t){return t?Mdl.getbuffcount(e.target,t):Mdl.getbuffcount(e.target,"neg")+Mdl.getbuffcount(e.target,"pos")}}}),this.passive={add:function(e,t){Modular.passiveadd(u.target,e,t?"yesdupe":"nodupe")},remove:function(e){Modular.passiveremove(u.target,e)},includes:function(e){return!!Modular.haspassive(u.target,e)}},this.resist=property(this,function(e){return new Proxy({},{get:function(t,a){var l=r.TYPES.attackTypes.sToI[a];if(l)return Mdl.getatkres(e.target,l)/100;var i=r.TYPES.sin.sToI[a];return i?Mdl.getsinres(e.target,i)/100:0},set:function(t,a,l){var i=r.TYPES.attackTypes.sToI[a];if(i)return Mdl.ovwatkres(e.target,i,l*100),!0;var o=r.TYPES.sin.sToI[a];return o?(Mdl.ovwsinres(e.target,o,l*100),!0):!1}})}),this.skill=property(this,function(e){return{get basePower(){return Modular.getskillbase(e.target)},addBasePower:function(t){Modular.base(t)},get coinPower(){return Modular.getcoinscale(e.target,0)},addCoinPower:function(t){Modular.scale(t)},getCoinAtIndexPower:function(t){return Modular.getcoinscale(e.target,t)},addClashPower:function(t){Mdl.clash(t)},get power(){return Mdl.getcurrentpower(e.target)},get rank(){return Mdl.getskillrank(e.target)},get weight(){return Mdl.getskillatkweight(e.target)},set weight(t){var a=Mdl.getskillatkweight(e.target);Mdl.atkweight(t-a)},get level(){return Mdl.getskilllevel(e.target)},get correction(){return Mdl.getskillatklevel(e.target)},get attackType(){var t;return(t=r.TYPES.attackTypes.nToS[Mdl.getskillatk(e.target)])!==null&&t!==void 0?t:"none"},set attackType(t){t!=="none"&&Mdl.changeatktype(r.TYPES.attackTypes.sToI[t])},get sin(){var t;return(t=r.TYPES.sin.nToS[Mdl.getskillattribute(e.target)])!==null&&t!==void 0?t:"neutral"},set sin(t){Mdl.changeaffinity(r.TYPES.sin.sToI[t])},get defenseType(){var t;return(t=r.TYPES.defenseType.nToS[Mdl.getskilldeftype(e.target)])!==null&&t!==void 0?t:"none"},get id(){var t=Modular.getskillid();return t!==-1?t:null},get clashable(){return!!Mdl.getskillcanduel(e.target)},set clashable(t){Mdl.skillcanduel(t?"True":"False")}}}),n){case"Self":this.core=new r("SelfCore");break;case"MainTarget":case"Target":this.core=new r(n+"Core");break;default:this.core=null}}return Object.defineProperty(r.prototype,"faction",{get:function(){return["ally","enemy"][Mdl.getunitfaction(this.target)]},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"level",{get:function(){return Mdl.getlevel(this.target)},set:function(n){Mdl.setlevel(this.target,n)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"hp",{get:function(){return Modular.gethp(this.target,"normal")},set:function(n){var u=Modular.gethp(this.target,"normal");Modular.healhp(this.target,n-u)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"maxHp",{get:function(){return Mdl.gethp(this.target,"max")},set:function(n){Mdl.setmaxhp(this.target,n)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"shield",{get:function(){return Mdl.getshield(this.target)},enumerable:!1,configurable:!0}),r.prototype.gainShield=function(n,u){Mdl.shield(this.target,n,u?"perm":void 0)},Object.defineProperty(r.prototype,"sp",{get:function(){return Modular.getsp(this.target)},set:function(n){var u=Modular.getsp(this.target);Modular.healsp(this.target,n-u)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"unitId",{get:function(){return Mdl.getid(this.target)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"instId",{get:function(){return Mdl.getinstid(this.target)},enumerable:!1,configurable:!0}),r.prototype.hasKeywordOrAssociation=function(n,u){return!!Mdl.haskey.apply(Mdl,__spreadArray([this.target,u?"OR":"AND"],n,!1))},r.prototype.actionable=function(){switch(Mdl.isactionable(this.target)){case 0:return!1;case 1:return!0;default:return null}},r.TYPES={attackTypes:{nToS:{3:"none",0:"slash",1:"pierce",2:"blunt"},sToN:{slash:0,pierce:1,blunt:2},sToI:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{nToS:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},sToN:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},sToI:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{nToS:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},sToN:{none:0,guard:1,evade:2,counter:3,attack:4}}},r})(),Units={self:new Unit("Self"),mainTarget:new Unit("MainTarget")};""";
+
     public ScriptRuntime(dynamic config = null)
     {
         Main.Logger.LogInfo("ScriptRuntime Init Begun");
@@ -217,13 +227,12 @@ public class ScriptRuntime
     }
 
     public readonly Dictionary<string, LoadedModule> LoadedModules = new();
-    public void loadFile(string fileDirectory)
+    public void loadFile(string fileDirectory, string modFolder)
     {
         Main.Logger.LogInfo("Loading JS FILE: =>> " + fileDirectory);
 
         string fileName = Path.GetFileName(fileDirectory);
         string currentScriptName = Path.GetFileNameWithoutExtension(fileDirectory);
-        string modFolder = Directory.GetParent(fileDirectory).Parent.FullName;
 
         Main.Logger.LogInfo($"mod folder is {modFolder}");
 
@@ -241,12 +250,32 @@ public class ScriptRuntime
             return;
         }
 
+        string[] lines = File.ReadAllLines(fileDirectory);
+        string COMMENT_PREFIX = "// Lethe:";
+        var configLine = lines.FirstOrDefault(line => line.TrimStart().StartsWith(COMMENT_PREFIX));
+        if (configLine != null)
+        {
+            var args = configLine[(configLine.IndexOf(COMMENT_PREFIX) + COMMENT_PREFIX.Length)..]
+                .TrimStart()
+                .Split(' ')
+                .Select(arg => arg.Trim())
+                .ToHashSet();
+
+            if (args.Contains("import-only"))
+            {
+                Main.Logger.LogInfo($"File {fileDirectory} is marked as import-only, skipping execution.");
+                return;
+            }
+        }
+
         V8ScriptEngine engine = new(V8ScriptEngineFlags.EnableDynamicModuleImports);
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading;
         engine.DocumentSettings.SearchPath = Path.GetDirectoryName(fileDirectory);
+        engine.DocumentSettings.Loader.DiscardCachedDocuments();
 
-        // Import Modular
-        engine.AddHostObject("Modular", mdlFunctions["all"]); engine.AddHostObject("Mdl", mdlFunctions["all"]);
+        // Import Modular and its shorthand.
+        engine.AddHostObject("Modular", mdlFunctions["all"]);
+        engine.AddHostObject("Mdl", mdlFunctions["all"]);
 
         // Import unique logger
         engine.AddHostObject("Logger", new
@@ -256,15 +285,21 @@ public class ScriptRuntime
         });
 
         // Import global game data and IO access.
-        engine.AddHostObject("GameData", StagePatches.jsData);
+        engine.AddHostObject("EncounterData", StagePatches.encounterData);
+        engine.AddHostObject("GlobalData", StagePatches.globalData);
         engine.AddHostObject("IO", new IO(modFolder));
+
+        // Import helper classes. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
+        engine.Execute(EXTERNAL_UTILITY_JS);
 
         try
         {
-            var mod = LoadedModules[currentScriptName] = new() { engine = engine };
+            var mod = new LoadedModule(engine);
 
-            // Add the script to the engine i guess idfk.
-            engine.DocumentSettings.AddSystemDocument("__main", ModuleCategory.Standard, File.ReadAllText(fileDirectory));
+            string contents = string.Join("\n", lines);
+
+            // Add the script to the engine.
+            engine.DocumentSettings.AddSystemDocument("__main", ModuleCategory.Standard, contents);
 
             // import it.
             Main.Logger.LogInfo($"About to quote on quote, import '{fileName}'");
@@ -279,6 +314,8 @@ public class ScriptRuntime
             mod.exports = engine.Script.___module___;
             Main.Logger.LogInfo($"Got it. adding the module into the list");
             Main.Logger.LogInfo($"Successfully loaded module {currentScriptName}");
+
+            LoadedModules[currentScriptName] = mod;
         }
         catch (Exception ex)
         {
@@ -288,6 +325,11 @@ public class ScriptRuntime
                 $"Failed parsing/loading {fileName}: {ex}"
             );
         }
+    }
+    public void loadLetheJavascriptFolder(string folderDirectory)
+    {
+        foreach (var file in Directory.GetFiles(folderDirectory, "*.js", SearchOption.AllDirectories))
+            loadFile(file, folderDirectory);
     }
     public void callScript(string scriptName, string method, object[] args)
     {
@@ -335,12 +377,16 @@ public class ScriptRuntime
             foreach (var jsPath in Directory.GetFiles(javascriptFolder, "*.js", SearchOption.AllDirectories))
             {
                 Main.Logger.LogInfo("Scanning for mexicans v2: " + jsPath);
-                Main.runtime.loadFile(jsPath);
+                Main.runtime.loadFile(jsPath, javascriptFolder);
             }
         }
     }
 
     private readonly Dictionary<string, FileSystemWatcher> watchers = new();
+    /// <summary>
+    /// Listen for a ./javascript folder change.
+    /// </summary>
+    /// <param name="dir"></param>
     private void Listen(string dir)
     {
 
@@ -352,14 +398,30 @@ public class ScriptRuntime
             EnableRaisingEvents = true
         };
 
-        watcher.Changed += (sender, e) => Main.runtime.loadFile(e.FullPath);
-        watcher.Created += (sender, e) => Main.runtime.loadFile(e.FullPath);
-        watcher.Deleted += (sender, e) => Main.runtime.loadFile(e.FullPath);
-        watcher.Renamed += (sender, e) =>
+        bool onlyReloadSingleFile = true;
+
+        if (onlyReloadSingleFile)
         {
-            Main.runtime.loadFile(e.OldFullPath);
-            Main.runtime.loadFile(e.FullPath);
-        };
+            watcher.Changed += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
+            watcher.Created += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
+            watcher.Deleted += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
+            watcher.Renamed += (sender, e) =>
+            {
+                Main.runtime.loadFile(e.OldFullPath, dir);
+                Main.runtime.loadFile(e.FullPath, dir);
+            };
+        }
+        else
+        {
+            watcher.Changed += (sender, e) => Main.runtime.loadLetheJavascriptFolder(dir);
+            watcher.Created += (sender, e) => Main.runtime.loadLetheJavascriptFolder(dir);
+            watcher.Deleted += (sender, e) => Main.runtime.loadLetheJavascriptFolder(dir);
+            watcher.Renamed += (sender, e) =>
+            {
+                Main.runtime.loadLetheJavascriptFolder(dir);
+                Main.runtime.loadLetheJavascriptFolder(dir);
+            };
+        }
         watchers.Add(dir, watcher);
     }
 
