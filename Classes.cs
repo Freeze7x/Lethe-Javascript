@@ -35,7 +35,7 @@ public class LoadedModule
 public class LoadedModuleUnused
 {
     public V8ScriptEngine engine { get; init; }
-    public Dictionary<string, ScriptObject> exports = new();
+    public Dictionary<string, ScriptObject> exports = [];
 
     public void Dispose()
     {
@@ -56,7 +56,7 @@ public class IO
     {
         this.modFolder = modFolder;
         this.javascriptFolder = Path.Combine(modFolder, "javascript");
-        this.pathCache = new() {
+        this.pathLookup = new() {
             {"mod://", modFolder},
             {"plugins://", Paths.PluginPath},
             {"./", javascriptFolder}
@@ -69,7 +69,7 @@ public class IO
         fileDir = formatPath(fileDir);
         if (!isPathAllowed(fileDir, Paths.PluginPath))
         {
-            Main.Logger.LogError("[JS] Attempted to read a file outside of the plugins folder without IO access enabled: " + fileDir);
+            Main.Logger.LogError("[JS] Attempted to read a file outside of the plugins folder: " + fileDir);
             return "";
         }
 
@@ -82,7 +82,7 @@ public class IO
         fileDir = formatPath(fileDir);
         if (!isPathAllowed(fileDir, modFolder))
         {
-            Main.Logger.LogError("[JS] Attempted to write a file outside of the plugins folder without IO access enabled: " + fileDir);
+            Main.Logger.LogError("[JS] Attempted to write a file outside of the mod folder: " + fileDir);
             return false;
         }
 
@@ -95,7 +95,7 @@ public class IO
         folderDir = formatPath(folderDir);
         if (!isPathAllowed(folderDir, Paths.PluginPath))
         {
-            Main.Logger.LogError("[JS] Attempted to list a directory outside of the plugins folder without IO access enabled: " + folderDir);
+            Main.Logger.LogError("[JS] Attempted to list a directory outside of the plugins folder: " + folderDir);
             return [];
         }
 
@@ -109,7 +109,7 @@ public class IO
         folderDir = formatPath(folderDir);
         if (!isPathAllowed(folderDir, Paths.PluginPath))
         {
-            Main.Logger.LogError("[JS] Attempted to list a directory outside of the plugins folder without IO access enabled: " + folderDir);
+            Main.Logger.LogError("[JS] Attempted to list a directory outside of the plugins folder: " + folderDir);
             return [];
         }
 
@@ -123,7 +123,7 @@ public class IO
         fileDir = formatPath(fileDir);
         if (!isPathAllowed(fileDir, modFolder))
         {
-            Main.Logger.LogError("[JS] Attempted to delete a file outside of the plugins folder without IO access enabled: " + fileDir);
+            Main.Logger.LogError("[JS] Attempted to delete a file outside of the mod folder: " + fileDir);
             return false;
         }
 
@@ -141,32 +141,30 @@ public class IO
 
     private static bool isPathAllowed(string fileDir, string folderRestriction)
     {
-        if (Main.runtime.config_IoFullAccess)
-            return true;
+        // If full IO access is permitted, just let it rip.
+        if (Main.runtime.config_IoFullAccess) return true;
 
-        string fullPath = Path.GetFullPath(fileDir);
-        string allowedRoot = Path.GetFullPath(folderRestriction);
+        fileDir = Path.GetFullPath(fileDir);
+        folderRestriction = Path.GetFullPath(folderRestriction);
 
-        if (!allowedRoot.EndsWith(Path.DirectorySeparatorChar))
-            allowedRoot += Path.DirectorySeparatorChar;
+        string relative = Path.GetRelativePath(folderRestriction, fileDir);
 
-        return fullPath.StartsWith(
-            allowedRoot,
-            StringComparison.OrdinalIgnoreCase
-        );
+        return !relative.StartsWith("..") && !Path.IsPathRooted(relative);
     }
-    private readonly Dictionary<string, string> pathCache;
+    private readonly Dictionary<string, string> pathLookup;
     private string formatPath(string path)
     {
-        if (path.StartsWith("./"))
-            path = Path.Combine(javascriptFolder, path);
-        else foreach (var (prefix, realPath) in pathCache)
+        foreach (var (prefix, realPath) in pathLookup)
         {
             if (path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            { path = Path.Combine(realPath, path[prefix.Length..]); break; }
+            {
+                path = Path.Combine(realPath, path[prefix.Length..]);
+                break;
+            }
         }
 
-        return Path.GetFullPath(path);
+        Main.Logger.LogInfo("path is: " + path);
+        return path;
     }
 }
 
@@ -176,17 +174,17 @@ public class ScriptRuntime
     public bool config_IoFullAccess = false;
     public reloadBehaviour config_reloadBehaviour = reloadBehaviour.onFileSave;
     #endregion
-    public PropertyBag mdlFunctions = new();
+    public PropertyBag mdlFunctions = [];
 
     // ts is laced and that damn dog got it im so sorry.
-    private const string EXTERNAL_UTILITY_JS = """var __spreadArray=this&&this.__spreadArray||function(r,n,u){if(u||arguments.length===2)for(var e=0,t=n.length,a;e<t;e++)(a||!(e in n))&&(a||(a=Array.prototype.slice.call(n,0,e)),a[e]=n[e]);return r.concat(a||Array.prototype.slice.call(n))};function property(r,n){return n(r)}var Unit=(function(){function r(n){var u=this;switch(this.target=n,this.speed=property(this,function(e){return{get min(){return Mdl.getstat(e.target,"speedMin")},get max(){return Mdl.getstat(e.target,"speedMax")},get current(){return Mdl.getspeed(e.target)},getSlotSpeed:function(t){return Mdl.getspeed(e.target,t)}}}),this.stagger=property(this,function(e){return{addAt:function(t){Mdl.breakaddbar(e.target,t)},tremorBurst:function(t,a){Mdl.burst(e.target,t??1),a&&Mdl.buff(e.target,"Vibration",0,-a,0)},staggerDamage:function(t,a){Modular.breakdmg(e.target,t??1,a)},instantStagger:function(t){Mdl.break(e.target,t)},recover:function(){Mdl.breakrecover(e.target)},getThresholds:function(){return new Array(Mdl.getbreakcount(e.target)).fill(null).map(function(t,a){Mdl.getbreakvalue(e.target,a)})}}}),this.buff=property(this,function(e){return{get:function(t){return{potency:Mdl.getbuff(e.target,t,"stack"),count:Mdl.getbuff(e.target,t,"turn"),consumed:Mdl.getbuff(e.target,t,"consumed")}},inflict:function(t,a,l,i,o){var g=i==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[i];Mdl.buff(e.target,t,a,l,g,o?"use":void 0)},getCount:function(t){return t?Mdl.getbuffcount(e.target,t):Mdl.getbuffcount(e.target,"neg")+Mdl.getbuffcount(e.target,"pos")}}}),this.passive={add:function(e,t){Modular.passiveadd(u.target,e,t?"yesdupe":"nodupe")},remove:function(e){Modular.passiveremove(u.target,e)},includes:function(e){return!!Modular.haspassive(u.target,e)}},this.resist=property(this,function(e){return new Proxy({},{get:function(t,a){var l=r.TYPES.attackTypes.sToI[a];if(l)return Mdl.getatkres(e.target,l)/100;var i=r.TYPES.sin.sToI[a];return i?Mdl.getsinres(e.target,i)/100:0},set:function(t,a,l){var i=r.TYPES.attackTypes.sToI[a];if(i)return Mdl.ovwatkres(e.target,i,l*100),!0;var o=r.TYPES.sin.sToI[a];return o?(Mdl.ovwsinres(e.target,o,l*100),!0):!1}})}),this.skill=property(this,function(e){return{get basePower(){return Modular.getskillbase(e.target)},addBasePower:function(t){Modular.base(t)},get coinPower(){return Modular.getcoinscale(e.target,0)},addCoinPower:function(t){Modular.scale(t)},getCoinAtIndexPower:function(t){return Modular.getcoinscale(e.target,t)},addClashPower:function(t){Mdl.clash(t)},get power(){return Mdl.getcurrentpower(e.target)},get rank(){return Mdl.getskillrank(e.target)},get weight(){return Mdl.getskillatkweight(e.target)},set weight(t){var a=Mdl.getskillatkweight(e.target);Mdl.atkweight(t-a)},get level(){return Mdl.getskilllevel(e.target)},get correction(){return Mdl.getskillatklevel(e.target)},get attackType(){var t;return(t=r.TYPES.attackTypes.nToS[Mdl.getskillatk(e.target)])!==null&&t!==void 0?t:"none"},set attackType(t){t!=="none"&&Mdl.changeatktype(r.TYPES.attackTypes.sToI[t])},get sin(){var t;return(t=r.TYPES.sin.nToS[Mdl.getskillattribute(e.target)])!==null&&t!==void 0?t:"neutral"},set sin(t){Mdl.changeaffinity(r.TYPES.sin.sToI[t])},get defenseType(){var t;return(t=r.TYPES.defenseType.nToS[Mdl.getskilldeftype(e.target)])!==null&&t!==void 0?t:"none"},get id(){var t=Modular.getskillid();return t!==-1?t:null},get clashable(){return!!Mdl.getskillcanduel(e.target)},set clashable(t){Mdl.skillcanduel(t?"True":"False")}}}),n){case"Self":this.core=new r("SelfCore");break;case"MainTarget":case"Target":this.core=new r(n+"Core");break;default:this.core=null}}return Object.defineProperty(r.prototype,"faction",{get:function(){return["ally","enemy"][Mdl.getunitfaction(this.target)]},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"level",{get:function(){return Mdl.getlevel(this.target)},set:function(n){Mdl.setlevel(this.target,n)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"hp",{get:function(){return Modular.gethp(this.target,"normal")},set:function(n){var u=Modular.gethp(this.target,"normal");Modular.healhp(this.target,n-u)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"maxHp",{get:function(){return Mdl.gethp(this.target,"max")},set:function(n){Mdl.setmaxhp(this.target,n)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"shield",{get:function(){return Mdl.getshield(this.target)},enumerable:!1,configurable:!0}),r.prototype.gainShield=function(n,u){Mdl.shield(this.target,n,u?"perm":void 0)},Object.defineProperty(r.prototype,"sp",{get:function(){return Modular.getsp(this.target)},set:function(n){var u=Modular.getsp(this.target);Modular.healsp(this.target,n-u)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"unitId",{get:function(){return Mdl.getid(this.target)},enumerable:!1,configurable:!0}),Object.defineProperty(r.prototype,"instId",{get:function(){return Mdl.getinstid(this.target)},enumerable:!1,configurable:!0}),r.prototype.hasKeywordOrAssociation=function(n,u){return!!Mdl.haskey.apply(Mdl,__spreadArray([this.target,u?"OR":"AND"],n,!1))},r.prototype.actionable=function(){switch(Mdl.isactionable(this.target)){case 0:return!1;case 1:return!0;default:return null}},r.TYPES={attackTypes:{nToS:{3:"none",0:"slash",1:"pierce",2:"blunt"},sToN:{slash:0,pierce:1,blunt:2},sToI:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{nToS:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},sToN:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},sToI:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{nToS:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},sToN:{none:0,guard:1,evade:2,counter:3,attack:4}}},r})(),Units={self:new Unit("Self"),mainTarget:new Unit("MainTarget")};""";
+    private const string EXTERNAL_UTILITY_JS = """ "use strict";function property(r,t){return t(r)}class Unit{target;static TYPES={attackTypes:{nToS:{3:"none",0:"slash",1:"pierce",2:"blunt"},sToN:{slash:0,pierce:1,blunt:2},sToI:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{nToS:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},sToN:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},sToI:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{nToS:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},sToN:{none:0,guard:1,evade:2,counter:3,attack:4}}};constructor(t){switch(this.target=t,t){case"Self":this.core=new Unit("SelfCore");break;case"MainTarget":case"Target":this.core=new Unit(t+"Core");break;default:this.core=null}}core;get faction(){return["ally","enemy"][Modular.getunitfaction(this.target)]}get level(){return Modular.getlevel(this.target)}set level(t){Modular.setlevel(this.target,t)}get hp(){return Modular.gethp(this.target,"normal")}set hp(t){const e=Modular.gethp(this.target,"normal");Modular.healhp(this.target,t-e)}get maxHp(){return Modular.gethp(this.target,"max")}set maxHp(t){Modular.setmaxhp(this.target,t)}get shield(){return Modular.getshield(this.target)}gainShield(t,e){Modular.shield(this.target,t,e?"perm":void 0)}get sp(){return Modular.getsp(this.target)}set sp(t){const e=Modular.getsp(this.target);Modular.healsp(this.target,t-e)}get unitId(){return Modular.getid(this.target)}get instId(){return Modular.getinstid(this.target)}hasKeywordOrAssociation(t,e){return!!Modular.haskey(this.target,e?"OR":"AND",...t)}actionable(){switch(Modular.isactionable(this.target)){case 0:return!1;case 1:return!0;default:return null}}speed=property(this,t=>({get min(){return Modular.getstat(t.target,"speedMin")},get max(){return Modular.getstat(t.target,"speedMax")},get current(){return Modular.getspeed(t.target)},getSlotSpeed(e){return Modular.getspeed(t.target,e)}}));stagger=property(this,t=>({addAt(e){Modular.breakaddbar(t.target,e)},tremorBurst(e,a){Modular.burst(t.target,e??1),a&&Modular.buff(t.target,"Vibration",0,-a,0)},staggerDamage(e,a){Modular.breakdmg(t.target,e??1,a)},instantStagger(e){Modular.break(t.target,e)},recover(){Modular.breakrecover(t.target)},getThresholds(){return new Array(Modular.getbreakcount(t.target)).fill(null).map((e,a)=>Modular.getbreakvalue(t.target,a))}}));buff=property(this,t=>({get(e){return{potency:Modular.getbuff(t.target,e,"stack"),count:Modular.getbuff(t.target,e,"turn"),consumed:Modular.getbuff(t.target,e,"consumed")}},inflict(e,a,u,n,o){const s=n==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[n];Modular.buff(t.target,e,a,u,s,o?"use":void 0)},getCount(e){return e?Modular.getbuffcount(t.target,e):Modular.getbuffcount(t.target,"neg")+Modular.getbuffcount(t.target,"pos")}}));passive={add:(t,e)=>{Modular.passiveadd(this.target,t,e?"yesdupe":"nodupe")},remove:t=>{Modular.passiveremove(this.target,t)},includes:t=>!!Modular.haspassive(this.target,t)};resist=property(this,t=>new Proxy({},{get(e,a){const u=Unit.TYPES.attackTypes.sToI[a];if(u)return Modular.getatkres(t.target,u)/100;const n=Unit.TYPES.sin.sToI[a];return n?Modular.getsinres(t.target,n)/100:0},set(e,a,u){const n=Unit.TYPES.attackTypes.sToI[a];if(n)return Modular.ovwatkres(t.target,n,u*100),!0;const o=Unit.TYPES.sin.sToI[a];return o?(Modular.ovwsinres(t.target,o,u*100),!0):!1}}));skill=property(this,t=>({get basePower(){return Modular.getskillbase(t.target)},addBasePower(e){Modular.base(e)},get coinPower(){return Modular.getcoinscale(t.target,0)},addCoinPower(e){Modular.scale(e)},getCoinAtIndexPower(e){return Modular.getcoinscale(t.target,e)},addClashPower(e){Modular.clash(e)},get power(){return Modular.getcurrentpower(t.target)},get rank(){return Modular.getskillrank(t.target)},get weight(){return Modular.getskillatkweight(t.target)},set weight(e){const a=Modular.getskillatkweight(t.target);Modular.atkweight(e-a)},get level(){return Modular.getskilllevel(t.target)},get correction(){return Modular.getskillatklevel(t.target)},get attackType(){return Unit.TYPES.attackTypes.nToS[Modular.getskillatk(t.target)]??"none"},set attackType(e){e!=="none"&&Modular.changeatktype(Unit.TYPES.attackTypes.sToI[e])},get sin(){return Unit.TYPES.sin.nToS[Modular.getskillattribute(t.target)]??"neutral"},set sin(e){Modular.changeaffinity(Unit.TYPES.sin.sToI[e])},get defenseType(){return Unit.TYPES.defenseType.nToS[Modular.getskilldeftype(t.target)]??"none"},get id(){const e=Modular.getskillid();return e!==-1?e:null},get clashable(){return!!Modular.getskillcanduel(t.target)},set clashable(e){Modular.skillcanduel(e?"True":"False")}}))}function createUnitTarget(r){return new Unit(r)}const Mathf={...Math,clamp(r,t,e){return Math.min(Math.max(r,t),e)},lerp(r,t,e){return r+(t-r)*e},roundToMultiple(r,t){return Math.round(r/t)*t},floorToMultiple(r,t){return Math.floor(r/t)*t},random(r,t){return r===void 0?Math.random():t===void 0?Math.random()*r:Math.random()*(t-r)+r}},Units={self:new Unit("Self"),mainTarget:new Unit("MainTarget")};function InvokeModular(r,...t){const e=Modular[r];return e?+e(...t):(Logger.error(`Could not find function ${r}`),0)} """;
 
     public ScriptRuntime(dynamic config = null)
     {
         Main.Logger.LogInfo("ScriptRuntime Init Begun");
 
-        PropertyBag cons = new();
-        PropertyBag acq = new();
+        PropertyBag cons = [];
+        PropertyBag acq = [];
 
         foreach (var (key, value) in MainClass.consequenceDict)
         {
@@ -226,7 +224,7 @@ public class ScriptRuntime
         Main.Logger.LogInfo("ScriptRuntime Init Done");
     }
 
-    public readonly Dictionary<string, LoadedModule> LoadedModules = new();
+    public readonly Dictionary<string, LoadedModule> LoadedModules = [];
     public void loadFile(string fileDirectory, string modFolder)
     {
         Main.Logger.LogInfo("Loading JS FILE: =>> " + fileDirectory);
@@ -251,7 +249,7 @@ public class ScriptRuntime
         }
 
         string[] lines = File.ReadAllLines(fileDirectory);
-        string COMMENT_PREFIX = "// Lethe:";
+        string COMMENT_PREFIX = "// # Lethe ";
         var configLine = lines.FirstOrDefault(line => line.TrimStart().StartsWith(COMMENT_PREFIX));
         if (configLine != null)
         {
@@ -382,7 +380,7 @@ public class ScriptRuntime
         }
     }
 
-    private readonly Dictionary<string, FileSystemWatcher> watchers = new();
+    private readonly Dictionary<string, FileSystemWatcher> watchers = [];
     /// <summary>
     /// Listen for a ./javascript folder change.
     /// </summary>
@@ -398,33 +396,15 @@ public class ScriptRuntime
             EnableRaisingEvents = true
         };
 
-        bool onlyReloadSingleFile = true;
+        watcher.Changed += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
+        watcher.Created += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
+        watcher.Deleted += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
+        watcher.Renamed += (sender, e) =>
+        {
+            Main.runtime.loadFile(e.OldFullPath, dir);
+            Main.runtime.loadFile(e.FullPath, dir);
+        };
 
-        if (onlyReloadSingleFile)
-        {
-            watcher.Changed += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
-            watcher.Created += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
-            watcher.Deleted += (sender, e) => Main.runtime.loadFile(e.FullPath, dir);
-            watcher.Renamed += (sender, e) =>
-            {
-                Main.runtime.loadFile(e.OldFullPath, dir);
-                Main.runtime.loadFile(e.FullPath, dir);
-            };
-        }
-        else
-        {
-            watcher.Changed += (sender, e) => Main.runtime.loadLetheJavascriptFolder(dir);
-            watcher.Created += (sender, e) => Main.runtime.loadLetheJavascriptFolder(dir);
-            watcher.Deleted += (sender, e) => Main.runtime.loadLetheJavascriptFolder(dir);
-            watcher.Renamed += (sender, e) =>
-            {
-                Main.runtime.loadLetheJavascriptFolder(dir);
-                Main.runtime.loadLetheJavascriptFolder(dir);
-            };
-        }
         watchers.Add(dir, watcher);
     }
-
-
-    public ConfigEntry<bool> ioAccess;
 }

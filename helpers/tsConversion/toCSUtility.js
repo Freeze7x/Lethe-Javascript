@@ -1,0 +1,390 @@
+// This file is auto-generated for review purposes.
+
+"use strict";
+function property(parent, factory) {
+    return factory(parent);
+}
+/** A class representing a unit in the game. */
+class Unit {
+    target;
+    static TYPES = {
+        attackTypes: {
+            nToS: {
+                3: "none",
+                0: "slash",
+                1: "pierce",
+                2: "blunt",
+            },
+            sToN: {
+                "slash": 0,
+                "pierce": 1,
+                "blunt": 2,
+            },
+            sToI: {
+                "blunt": "HIT",
+                "slash": "SLASH",
+                "pierce": "PENETRATE",
+            }
+        },
+        sin: {
+            nToS: {
+                0: "wrath", 1: "lust", 2: "sloth",
+                3: "gluttony", 4: "gloom", 5: "pride",
+                6: "envy",
+                7: "white", 8: "black",
+                9: "red", 10: "pale",
+                11: "neutral",
+            },
+            sToN: {
+                "wrath": 0, "lust": 1, "sloth": 2,
+                "gluttony": 3, "gloom": 4, "pride": 5,
+                "envy": 6,
+                "white": 7, "black": 8,
+                "red": 9, "pale": 10,
+                "neutral": 11
+            },
+            sToI: {
+                "wrath": "CRIMSON", "lust": "SCARLET", "sloth": "AMBER",
+                "gluttony": "SHAMROCK", "gloom": "AZURE", "pride": "INDIGO",
+                "envy": "VIOLET",
+                "white": "WHITE", "black": "BLACK",
+                "red": "RED", "pale": "PALE",
+                "neutral": "NEUTRAL"
+            }
+        },
+        defenseType: {
+            nToS: {
+                0: "none",
+                1: "guard",
+                2: "evade",
+                3: "counter",
+                4: "attack",
+            },
+            sToN: {
+                "none": 0,
+                "guard": 1,
+                "evade": 2,
+                "counter": 3,
+                "attack": 4,
+            }
+        }
+    };
+    constructor(target) {
+        this.target = target;
+        switch (target) {
+            case "Self":
+                this.core = new Unit("SelfCore");
+                break;
+            case "MainTarget":
+            case "Target":
+                this.core = new Unit(target + "Core");
+                break;
+            default:
+                this.core = null;
+        }
+    }
+    core;
+    /** The faction this unit belongs to. */
+    get faction() { return ["ally", "enemy"][Modular.getunitfaction(this.target)]; }
+    /** The level of this unit. */
+    get level() { return Modular.getlevel(this.target); }
+    set level(v) {
+        //@ts-ignore 
+        Modular.setlevel(this.target, v);
+    }
+    /** How much HP this unit has. */
+    get hp() { return Modular.gethp(this.target, "normal"); }
+    set hp(v) {
+        const cur = Modular.gethp(this.target, "normal");
+        Modular.healhp(this.target, v - cur);
+    }
+    /** The maximum HP this unit can have. */
+    get maxHp() { return Modular.gethp(this.target, "max"); }
+    set maxHp(v) {
+        //@ts-ignore
+        Modular.setmaxhp(this.target, v);
+    }
+    /** How much shield this unit has. */
+    get shield() { return Modular.getshield(this.target); }
+    /**
+     * Gain shield for this unit.
+     * @param amount - The amount of shield to gain
+     * @param persist - Whether the shield should persist permanently
+     */
+    gainShield(amount, persist) {
+        Modular.shield(this.target, amount, persist ? "perm" : undefined);
+    }
+    /** The SP value for this unit. */
+    get sp() { return Modular.getsp(this.target); }
+    set sp(v) {
+        const cur = Modular.getsp(this.target);
+        Modular.healsp(this.target, v - cur);
+    }
+    /** This unit's UID. */
+    get unitId() { return Modular.getid(this.target); }
+    /** This unit's instance ID. */
+    get instId() { return Modular.getinstid(this.target); }
+    /**
+     * Check if this unit has a keyword or association.
+     * @param keywordAssoc - A keyword or array of keywords to check
+     * @param matchAny - If true, match any keyword (OR); if false, match all keywords (AND)
+     */
+    hasKeywordOrAssociation(keywordAssoc, matchAny) {
+        return !!Modular.haskey(this.target, matchAny ? "OR" : "AND", ...keywordAssoc);
+    }
+    /**
+     * Check if this unit is actionable.
+     * If the unit does not exist, this returns null.
+     */
+    actionable() {
+        switch (Modular.isactionable(this.target)) {
+            case 0: return false;
+            case 1: return true;
+            default: return null;
+        }
+    }
+    speed = property(this, self => {
+        return {
+            /** The minimum speed roll for this unit. */
+            get min() { return Modular.getstat(self.target, "speedMin"); },
+            /** The maximum speed roll for this unit. */
+            get max() { return Modular.getstat(self.target, "speedMax"); },
+            /** The current speed for this unit. */
+            get current() { return Modular.getspeed(self.target); },
+            /**
+             * Get the speed of a specific slot.
+             * @param index - The slot index
+             */
+            getSlotSpeed(index) {
+                return Modular.getspeed(self.target, index);
+            }
+        };
+    });
+    stagger = property(this, self => {
+        return {
+            /**
+             * Add a stagger bar at a specific HP threshold.
+             */
+            addAt(hp) { Modular.breakaddbar(self.target, hp); },
+            /**
+             * Trigger tremor burst on this unit.
+             * @param times - Number of times to trigger. (defaults to once)
+             * @param lowerCount - Lower the count of Tremor by this amount.
+             */
+            tremorBurst(times, lowerCount) {
+                Modular.burst(self.target, times ?? 1);
+                if (lowerCount) {
+                    Modular.buff(self.target, "Vibration", 0, -lowerCount, 0);
+                }
+            },
+            /**
+             * Raise this unit's stagger threshold by the provided amount.
+             * @param amount - The amount of stagger damage.
+             * @param times - Number of times to trigger.
+             */
+            staggerDamage(amount, times) {
+                Modular.breakdmg(self.target, amount ?? 1, times);
+            },
+            /**
+             * Instantly stagger this unit.
+             * @param type - Type of stagger: "natural", "force", or "both" (optional)
+             */
+            instantStagger(type) {
+                Modular.break(self.target, type);
+            },
+            /**
+             * Immediately recover from stagger.
+             */
+            recover() { Modular.breakrecover(self.target); },
+            /**
+             * Get all stagger thresholds.
+             * @returns Array of stagger threshold values
+             */
+            getThresholds() {
+                return new Array(Modular.getbreakcount(self.target)).fill(null).map((_, index) => {
+                    return Modular.getbreakvalue(self.target, index);
+                });
+            }
+        };
+    });
+    buff = property(this, self => {
+        return {
+            /**
+             * Get buff information on this unit by keyword.
+             * @param keyword - The buff keyword to look up
+             */
+            get(keyword) {
+                return {
+                    potency: Modular.getbuff(self.target, keyword, "stack"),
+                    count: Modular.getbuff(self.target, keyword, "turn"),
+                    consumed: Modular.getbuff(self.target, keyword, "consumed"),
+                };
+            },
+            /**
+             * Inflict a buff on this unit.
+             * @param keyword - The buff keyword.
+             * @param potency - How much potency to inflict.
+             * @param count - How much count to inflict.
+             * @param activeRound - When the buff should become active.
+             */
+            inflict(keyword, potency, count, activeRound, use) {
+                const turnToAcivate = activeRound == undefined ? 0 : { "this turn": 0, "next turn": 1, "this and next turn": 2 }[activeRound];
+                Modular.buff(self.target, keyword, potency, count, turnToAcivate, use ? "use" : undefined);
+            },
+            /**
+             * Get the count of buffs on this unit.
+             * @param type - The type of buff to count.
+             */
+            getCount(type) {
+                return type ?
+                    Modular.getbuffcount(self.target, type) :
+                    Modular.getbuffcount(self.target, "neg") + Modular.getbuffcount(self.target, "pos");
+            }
+        };
+    });
+    passive = {
+        /**
+         * Adds a passive to this unit.
+         * @param id The passive ID to add.
+         * @param allowDupe If true, allows duplicates of the passive to be added. (default: false)
+         */
+        add: (id, allowDupe) => {
+            Modular.passiveadd(this.target, id, allowDupe ? "yesdupe" : "nodupe");
+        },
+        /**
+         * Removes a passive from this unit.
+         * @param id The passive ID to remove.
+         */
+        remove: (id) => {
+            Modular.passiveremove(this.target, id);
+        },
+        /**
+         * Check to see if this unit has a specific passive.
+         * @param id The passive ID to check.
+         */
+        includes: (id) => {
+            return !!Modular.haspassive(this.target, id);
+        }
+    };
+    /** The resistance values for this unit. */
+    resist = property(this, self => {
+        return new Proxy({}, {
+            get(_, key) {
+                const atkType = Unit.TYPES.attackTypes.sToI[key];
+                if (atkType)
+                    return Modular.getatkres(self.target, atkType) / 100;
+                const sin = Unit.TYPES.sin.sToI[key];
+                if (sin)
+                    //@ts-ignore
+                    return Modular.getsinres(self.target, sin) / 100;
+                return 0;
+            },
+            set(_, key, v) {
+                const atkType = Unit.TYPES.attackTypes.sToI[key];
+                if (atkType) {
+                    Modular.ovwatkres(self.target, atkType, v * 100);
+                    return true;
+                }
+                const sin = Unit.TYPES.sin.sToI[key];
+                if (sin) {
+                    Modular.ovwsinres(self.target, sin, v * 100);
+                    return true;
+                }
+                return false;
+            }
+        });
+    });
+    skill = property(this, self => {
+        return {
+            /** The current skill's base power. */
+            get basePower() { return Modular.getskillbase(self.target); },
+            /** Add to the skill's base power. */
+            addBasePower(v) { Modular.base(v); },
+            /** The current skill's coin power. */
+            get coinPower() { return Modular.getcoinscale(self.target, 0); },
+            /** Add to the current skill's coin power. */
+            addCoinPower(v) { Modular.scale(v); },
+            /** The current skill's coin power at a specific index. */
+            getCoinAtIndexPower(index) { return Modular.getcoinscale(self.target, index); },
+            /** Add to the current skill's clash power. */
+            addClashPower(v) { Modular.clash(v); },
+            /** Get the current skill's power. */
+            get power() { return Modular.getcurrentpower(self.target); },
+            /** Get the current skill's rank. */
+            get rank() { return Modular.getskillrank(self.target); },
+            /** Get or set the skill's attack weight. */
+            get weight() { return Modular.getskillatkweight(self.target); },
+            set weight(v) {
+                const cur = Modular.getskillatkweight(self.target);
+                Modular.atkweight(v - cur);
+            },
+            /** Get the current skill's level correction + this unit's offense level. */
+            get level() { return Modular.getskilllevel(self.target); },
+            /** Get the current skill's level correction. */
+            get correction() { return Modular.getskillatklevel(self.target); },
+            /** The current skill's attack type. */
+            get attackType() {
+                return Unit.TYPES.attackTypes.nToS[Modular.getskillatk(self.target)] ?? "none";
+            },
+            set attackType(v) { if (v !== "none")
+                Modular.changeatktype(Unit.TYPES.attackTypes.sToI[v]); },
+            /** The current skill's sin affinity. */
+            get sin() {
+                return Unit.TYPES.sin.nToS[Modular.getskillattribute(self.target)] ?? "neutral";
+            },
+            set sin(v) { Modular.changeaffinity(Unit.TYPES.sin.sToI[v]); },
+            /** The current skill's defense type, if any. */
+            get defenseType() {
+                return Unit.TYPES.defenseType.nToS[Modular.getskilldeftype(self.target)] ?? "none";
+            },
+            /** Get the skill's ID. */
+            get id() {
+                const id = Modular.getskillid();
+                return id !== -1 ? id : null;
+            },
+            /** Whether the current skill is clashable. */
+            get clashable() { return !!Modular.getskillcanduel(self.target); },
+            set clashable(v) { Modular.skillcanduel(v ? "True" : "False"); }
+        };
+    });
+}
+function createUnitTarget(target) { return new Unit(target); }
+const Mathf = {
+    ...Math,
+    /** Clamp a value between a minimum and maximum. */
+    clamp(value, min, max) {
+        return Math.min(Math.max(value, min), max);
+    },
+    lerp(start, end, t) {
+        return start + (end - start) * t;
+    },
+    /** Get the value of a number rounded to the nearest multiple of a given number. */
+    roundToMultiple(value, multiple) {
+        return Math.round(value / multiple) * multiple;
+    },
+    /** Get the value of a number rounded down to the nearest multiple of a given number. */
+    floorToMultiple(value, multiple) {
+        return Math.floor(value / multiple) * multiple;
+    },
+    /** Returns a pseudorandom number between the provided values, or 0 and 1 if none provided. */
+    random(x, y) {
+        if (x === undefined)
+            return Math.random();
+        if (y === undefined)
+            return Math.random() * x;
+        return (Math.random() * (y - x)) + x;
+    }
+};
+const Units = {
+    self: new Unit("Self"),
+    mainTarget: new Unit("MainTarget"),
+};
+function InvokeModular(name, ...args) {
+    const func = Modular[name];
+    if (!func) {
+        Logger.error(`Could not find function ${name}`);
+        return 0;
+    }
+    //@ts-ignore
+    return +func(...args);
+}
