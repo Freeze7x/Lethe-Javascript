@@ -15,14 +15,14 @@
     Some extra globals are provided to you, such as:
     `Mathf`, An extension of the built in Math object with extra methods and properties.
     `EncounterData`/`GlobalData`, Records that allow you to store data that persists across the entire encounter or the session, respectively.
-    `createUnitTarget(unit)`, A function that creates a target object for a given unit, which can be used in Modular functions that require a target.
+    `CreateUnitTarget(unit)`, A function that creates a target object for a given unit, which can be used in Modular functions that require a target.
     `Units`, An object that contains references to important units in the given context, such as the user and the main target.
     `InvokeModular(funcName, ...args)`, A function that allows you to call any Modular function with the specified arguments.
 */
 
 Mathf;
 EncounterData; GlobalData;
-createUnitTarget;
+CreateUnitTarget;
 Units;
 InvokeModular;
 
