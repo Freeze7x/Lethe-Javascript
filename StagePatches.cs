@@ -10,8 +10,9 @@ namespace LetheJavascript.Patches;
 
 public class StagePatches
 {
-    public static PropertyBag encounterData = new();
-    public static PropertyBag globalData = new();
+    public static PropertyBag encounterData = [];
+    public static PropertyBag globalData = [];
+    public static int EncounterID = -1;
     static StagePatches()
     {
 
@@ -20,6 +21,8 @@ public class StagePatches
     [HarmonyPrefix]
     private static void Prefix_StageModel_Init(StageStaticData stageinfo, StageModel __instance)
     {
-        encounterData = new();
+        encounterData = [];
+        // Increment the encounter ID.
+        EncounterID++;
     }
 }

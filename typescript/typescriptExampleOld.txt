@@ -1,0 +1,46 @@
+// # Lethe do-not-load
+
+/*
+    Providing `// # Lethe ` at the start of a file allows
+    you to specify space-separated flags that control how
+    or if the file is loaded.
+
+    The available tags are:
+    - `do-not-load`: The file will not be loaded at all. This is useful for files that are only meant to be used as templates or for reference.
+    - `import-only`: The file will not be loaded at all. Use this over `do-not-load` for clarity when you want a script to be imported.
+        Keep in mind that imported scripts do not have access to the provided globals.
+*/
+
+/*
+    Some extra globals are provided to you, such as:
+    `Mathf`, An extension of the built in Math object with extra methods and properties.
+    `EncounterData`/`GlobalData`, Records that allow you to store data that persists across the entire encounter or the session, respectively.
+    `CreateUnitTarget(unit)`, A function that creates a target object for a given unit, which can be used in Modular functions that require a target.
+    `Units`, An object that contains references to important units in the given context, such as the user and the main target.
+    `InvokeModular(funcName, ...args)`, A function that allows you to call any Modular function with the specified arguments.
+*/
+
+Mathf;
+EncounterData; GlobalData;
+CreateUnitTarget;
+Units;
+InvokeModular;
+
+/*
+    Exported functions can be called via Modular using `runjavascript(scriptName, funcName, ...args)`.
+    The entire script, when loaded, has access to the Modular context that called it, even outside of the function.
+
+    You can use the `Units` global to get easy to work with methods and properties,
+    or use `InvokeModular(mdlFunc, ...args)` to call any function that exists.
+    It is recommended that you rely on the documentation (https://rentry.co/glitchscript) when doing so.
+*/
+
+// Coin Power +1 for every 4 bleed on the target (max 3);
+export function Example01() {
+    const { self, mainTarget } = Units;
+    const bleed = mainTarget.buff.get("Laceration");
+
+    const toAdd = Math.min(Math.floor(bleed.potency / 4), 3);
+
+    self.skill.addCoinPower(toAdd);
+}

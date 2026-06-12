@@ -6,6 +6,7 @@ using LetheJavascript.Classes;
 using ModularSkillScripts;
 using LetheJavascript.Modular;
 using Lethe;
+using Il2CppSystem.IO;
 
 
 namespace LetheJavascript;
@@ -27,10 +28,10 @@ public class Main : BasePlugin
         harmony.PatchAll(typeof(Patches.ReloadPatches));
 
         Logger = BepInEx.Logging.Logger.CreateLogSource("LetheJavascript");
-        MainClass.consequenceDict["runjavascript"] = new ModularConsequenceRunJavascript();
-
         Logger.LogInfo("runtime about to be init hell yeah");
         Logger.LogInfo($"lowkey hijacking lethe rn {LetheMain.modsPath}");
+
+        patchModular();
 
         runtime = new()
         {
@@ -45,6 +46,36 @@ public class Main : BasePlugin
         };
         runtime.LoadAllFromModPath();
     }
-
     public static ScriptRuntime runtime;
+    /// <summary>
+    /// Lowkey dont run this
+    /// </summary>
+    private static void updateLetheModTemplate()
+    {
+        // # TDIFU
+        const string tsconfig = "";
+        const string tsdts = "";
+
+        if (Directory.Exists(LetheMain.templatePath.FullPath))
+        {
+            string[] pathsToCreate = ["javascript", "typescript", Path.Combine("typescript", "ts-defs")];
+            foreach (string path in pathsToCreate)
+            {
+                var fullPath = Path.Combine(LetheMain.templatePath.FullPath, path);
+                if (!Directory.Exists(fullPath))
+                    Directory.CreateDirectory(fullPath);
+            }
+
+            File.WriteAllText(tsconfig, Path.Combine(LetheMain.templatePath.FullPath, "typescript", "tsconfig.json"));
+            File.WriteAllText(tsdts, Path.Combine(LetheMain.templatePath.FullPath, "typescript", "ts-defs", "modular.d.ts"));
+
+            Directory.CreateDirectory("");
+        }
+    }
+
+    private static void patchModular()
+    {
+        MainClass.consequenceDict["runjavascript"] = new ModularConsequenceRunJavascript();
+        MainClass.acquirerDict["getencounteruid"] = new ModularAcquirerEncounterUid();
+    }
 }

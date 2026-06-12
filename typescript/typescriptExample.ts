@@ -22,8 +22,6 @@
 
 Mathf;
 EncounterData; GlobalData;
-CreateUnitTarget;
-Units;
 InvokeModular;
 
 /*
@@ -37,10 +35,12 @@ InvokeModular;
 
 // Coin Power +1 for every 4 bleed on the target (max 3);
 export function Example01() {
-    const { self, mainTarget } = Units;
+    const self = GetUnit("Self");
+    if (!self) return;
+    const mainTarget = GetUnit("MainTarget");
+    if (!mainTarget) return;
+
     const bleed = mainTarget.buff.get("Laceration");
-
-    const toAdd = Mathf.min(Math.floor(bleed.potency / 4), 3);
-
+    const toAdd = Math.min(Math.floor(bleed.potency / 4), 3);
     self.skill.addCoinPower(toAdd);
 }

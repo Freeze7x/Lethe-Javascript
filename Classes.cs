@@ -16,6 +16,8 @@ using System.Linq;
 using LetheJavascript.Patches;
 using BepInEx.Configuration;
 using BepInEx;
+using System.Text.RegularExpressions;
+using System.Runtime.CompilerServices;
 
 namespace LetheJavascript.Classes;
 
@@ -23,13 +25,25 @@ public class LoadedModule
 {
     public LoadedModule(V8ScriptEngine engine)
     {
-        this.engine = engine;
+        this.Engine = engine;
     }
-    public V8ScriptEngine engine { get; init; }
-    public ScriptObject exports;
-    public string modFolder;
+    public V8ScriptEngine Engine { get; init; }
+    public ScriptObject Exports;
+    /// <summary>
+    /// The Lethe mod folder this file is from.
+    /// </summary>
+    public string ModFolder;
+    /// <summary>
+    /// The path to the file this script was loaded from.
+    /// </summary>
+    public string FileDirectory;
+    public HashSet<string> Dependencies = [];
 
-    public void Dispose() => engine.Dispose();
+    public void Dispose() => Engine.Dispose();
+    public void Reload(ScriptRuntime parent)
+    {
+        parent.loadFile(FileDirectory, ModFolder);
+    }
 }
 
 public enum reloadBehaviour
@@ -58,8 +72,7 @@ public class IO
         fileDir = formatPath(fileDir);
         if (!isPathAllowed(fileDir, Paths.PluginPath))
         {
-            Main.Logger.LogError("[JS] Attempted to read a file outside of the plugins folder: " + fileDir);
-            return "";
+            Main.Logger.LogError("[JS] Access Violation: " + fileDir); return "";
         }
 
         try { return File.ReadAllText(fileDir); }
@@ -71,8 +84,7 @@ public class IO
         fileDir = formatPath(fileDir);
         if (!isPathAllowed(fileDir, modFolder))
         {
-            Main.Logger.LogError("[JS] Attempted to write a file outside of the mod folder: " + fileDir);
-            return false;
+            Main.Logger.LogError("[JS] Access Violation: " + fileDir); return false;
         }
 
         try { File.WriteAllText(fileDir, content); }
@@ -84,8 +96,7 @@ public class IO
         folderDir = formatPath(folderDir);
         if (!isPathAllowed(folderDir, Paths.PluginPath))
         {
-            Main.Logger.LogError("[JS] Attempted to list a directory outside of the plugins folder: " + folderDir);
-            return [];
+            Main.Logger.LogError("[JS] Access Violation: " + folderDir); return [];
         }
 
         if (!Directory.Exists(folderDir)) return [];
@@ -98,8 +109,7 @@ public class IO
         folderDir = formatPath(folderDir);
         if (!isPathAllowed(folderDir, Paths.PluginPath))
         {
-            Main.Logger.LogError("[JS] Attempted to list a directory outside of the plugins folder: " + folderDir);
-            return [];
+            Main.Logger.LogError("[JS] Access Violation: " + folderDir); return [];
         }
 
         if (!Directory.Exists(folderDir)) return [];
@@ -112,7 +122,7 @@ public class IO
         fileDir = formatPath(fileDir);
         if (!isPathAllowed(fileDir, modFolder))
         {
-            Main.Logger.LogError("[JS] Attempted to delete a file outside of the mod folder: " + fileDir);
+            Main.Logger.LogError("[JS] Access Violation: " + fileDir);
             return false;
         }
 
@@ -122,8 +132,7 @@ public class IO
 
             if (Directory.Exists(fileDir)) { Directory.Delete(fileDir, true); return true; }
 
-            Main.Logger.LogError("[JS] Attempted to delete a file that does not exist: " + fileDir);
-            return false;
+            Main.Logger.LogError("[JS] Access Violation: " + fileDir); return false;
         }
         catch (Exception ex) { Main.Logger.LogError(ex); return false; }
     }
@@ -163,53 +172,37 @@ public class ScriptRuntime
     public bool config_IoFullAccess = false;
     public reloadBehaviour config_reloadBehaviour = reloadBehaviour.onFileSave;
     #endregion
-    public PropertyBag mdlFunctions = [];
+    public static int InvokeModular(string name, params object[] args)
+    {
+        string argsString = string.Join(',', args);
+        if (MainClass.consequenceDict.ContainsKey(name))
+        {
+            MainClass.consequenceDict[name].ExecuteConsequence(
+                ModularConsequenceRunJavascript.lastSA,
+                $"{name}({argsString})", argsString,
+                Array.ConvertAll(args, x => x?.ToString() ?? "")
+            );
+            return 0;
+        }
+
+        if (MainClass.acquirerDict.ContainsKey(name))
+        {
+            return MainClass.acquirerDict[name].ExecuteAcquirer(
+                ModularConsequenceRunJavascript.lastSA,
+                $"{name}({argsString})", argsString,
+                Array.ConvertAll(args, x => x?.ToString() ?? "")
+            );
+        }
+
+        return 0;
+    }
 
     // ts is laced and that damn dog got it im so sorry.
-    private const string EXTERNAL_UTILITY_JS = """ "use strict";function property(r,t){return t(r)}class UnitPropertyClass{parent;constructor(t){this.parent=t,this.target=t.target,this.target2=t.target}target;target2}class Unit{target;static TYPES={attackTypes:{nToS:{3:"none",0:"slash",1:"pierce",2:"blunt"},sToN:{slash:0,pierce:1,blunt:2},sToI:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{nToS:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},sToN:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},sToI:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{nToS:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},sToN:{none:0,guard:1,evade:2,counter:3,attack:4}}};static GROUPS={Speed:class extends UnitPropertyClass{get min(){return Modular.getstat(this.target,"speedMin")}get max(){return Modular.getstat(this.target,"speedMax")}get current(){return Modular.getspeed(this.target)}getSlotSpeed(t){return Modular.getspeed(this.target,t)}},Stagger:class extends UnitPropertyClass{addAt(t){Modular.breakaddbar(this.target,t)}tremorBurst(t,e){Modular.burst(this.target,t??1),e&&Modular.buff(this.target,"Vibration",0,-e,0)}staggerDamage(t,e){Modular.breakdmg(this.target,t??1,e)}instantStagger(t){Modular.break(this.target,t)}recover(){Modular.breakrecover(this.target)}getThresholds(){return new Array(Modular.getbreakcount(this.target)).fill(null).map((t,e)=>Modular.getbreakvalue(this.target,e))}},Buff:class extends UnitPropertyClass{get(t){return{potency:Modular.getbuff(this.target,t,"stack"),count:Modular.getbuff(this.target,t,"turn"),consumed:Modular.getbuff(this.target,t,"consumed")}}inflict(t,e,s,a,n){const u=a==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[a];Modular.buff(this.target,t,e,s,u,n?"use":void 0)}getCount(t){return t?Modular.getbuffcount(this.target,t):Modular.getbuffcount(this.target,"neg")+Modular.getbuffcount(this.target,"pos")}},Passive:class extends UnitPropertyClass{add(t,e){Modular.passiveadd(this.target,t,e?"yesdupe":"nodupe")}remove(t){Modular.passiveremove(this.target,t)}includes(t){return!!Modular.haspassive(this.target,t)}},Skill:class extends UnitPropertyClass{get basePower(){return Modular.getskillbase(this.target)}addBasePower(t){Modular.base(t)}get coinPower(){return Modular.getcoinscale(this.target,0)}addCoinPower(t){Modular.scale(t)}getCoinAtIndexPower(t){return Modular.getcoinscale(this.target,t)}addClashPower(t){Modular.clash(t)}get power(){return Modular.getcurrentpower(this.target)}get rank(){return Modular.getskillrank(this.target)}get weight(){return Modular.getskillatkweight(this.target)}set weight(t){const e=Modular.getskillatkweight(this.target);Modular.atkweight(t-e)}get level(){return Modular.getskilllevel(this.target)}get correction(){return Modular.getskillatklevel(this.target)}get attackType(){return Unit.TYPES.attackTypes.nToS[Modular.getskillatk(this.target)]??"none"}set attackType(t){t!=="none"&&Modular.changeatktype(Unit.TYPES.attackTypes.sToI[t])}get sin(){return Unit.TYPES.sin.nToS[Modular.getskillattribute(this.target)]??"neutral"}set sin(t){Modular.changeaffinity(Unit.TYPES.sin.sToI[t])}get defenseType(){return Unit.TYPES.defenseType.nToS[Modular.getskilldeftype(this.target)]??"none"}get id(){const t=Modular.getskillid();return t!==-1?t:null}get clashable(){return!!Modular.getskillcanduel(this.target)}set clashable(t){Modular.skillcanduel(t?"True":"False")}}};constructor(t){switch(this.target=t,t){case"Self":this.core=new Unit("SelfCore");break;case"MainTarget":case"Target":this.core=new Unit(t+"Core");break;default:this.core=null}}core;get faction(){return["ally","enemy"][Modular.getunitfaction(this.target)]}get level(){return Modular.getlevel(this.target)}set level(t){Modular.setlevel(this.target,t)}get hp(){return Modular.gethp(this.target,"normal")}set hp(t){const e=Modular.gethp(this.target,"normal");Modular.healhp(this.target,t-e)}get maxHp(){return Modular.gethp(this.target,"max")}set maxHp(t){Modular.setmaxhp(this.target,t)}get shield(){return Modular.getshield(this.target)}gainShield(t,e){Modular.shield(this.target,t,e?"perm":void 0)}get sp(){return Modular.getsp(this.target)}set sp(t){const e=Modular.getsp(this.target);Modular.healsp(this.target,t-e)}get unitId(){return Modular.getid(this.target)}get instId(){return Modular.getinstid(this.target)}hasKeywordOrAssociation(t,e){return!!Modular.haskey(this.target,e?"OR":"AND",...Array.isArray(t)?t:[t])}actionable(){switch(Modular.isactionable(this.target)){case 0:return!1;case 1:return!0;default:return null}}speed=new Unit.GROUPS.Speed(this);stagger=new Unit.GROUPS.Stagger(this);buff=new Unit.GROUPS.Buff(this);passive=new Unit.GROUPS.Passive(this);skill=new Unit.GROUPS.Skill(this);resist=property(this,t=>new Proxy({},{get(e,s){const a=Unit.TYPES.attackTypes.sToI[s];if(a)return Modular.getatkres(t.target,a)/100;const n=Unit.TYPES.sin.sToI[s];return n?Modular.getsinres(t.target,n)/100:0},set(e,s,a){const n=Unit.TYPES.attackTypes.sToI[s];if(n)return Modular.ovwatkres(t.target,n,a*100),!0;const u=Unit.TYPES.sin.sToI[s];return u?(Modular.ovwsinres(t.target,u,a*100),!0):!1}}))}new Unit("").buff.get;function CreateUnitTarget(r){return new Unit(r)}const Mathf={...Math,clamp(r,t,e){return Math.min(Math.max(r,t),e)},lerp(r,t,e){return r+(t-r)*e},roundToMultiple(r,t){return Math.round(r/t)*t},floorToMultiple(r,t){return Math.floor(r/t)*t},random(r,t){return r===void 0?Math.random():t===void 0?Math.random()*r:Math.random()*(t-r)+r}},Units={self:new Unit("Self"),mainTarget:new Unit("MainTarget")};function InvokeModular(r,...t){const e=Modular[r];return e?+e(...t):(Logger.error(`Could not find function ${r}`),0)} """;
+    private const string EXTERNAL_UTILITY_JS = """ "use strict";class UnitPropertyClass{parent;constructor(e){this.parent=e}get target(){return this.parent.target}get _targetAsSelfOrTarget(){return this.parent.target}}class Unit{target;static TYPES={attackTypes:{intToName:{3:"none",0:"slash",1:"pierce",2:"blunt"},nameToInt:{slash:0,pierce:1,blunt:2},nameToInternal:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{intToName:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},nameToInt:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},nameToInternal:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{intToName:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},nameToInt:{none:0,guard:1,evade:2,counter:3,attack:4}}};static GROUPS={Hp:class extends UnitPropertyClass{get max(){return InvokeModular("gethp",this.target,"max")}set max(e){e|=0,InvokeModular("setmaxhp",this.target,e)}get current(){return InvokeModular("gethp",this.target,"normal")}set current(e){e|=0;const t=InvokeModular("gethp",this.target,"normal");InvokeModular("healhp",this.target,e-t)}get normalized(){return this.current/this.max}heal(e){InvokeModular("healhp",this.target,e)}healPercent(e){InvokeModular("healhp",this.target,`${e}%`)}},Speed:class extends UnitPropertyClass{get min(){return InvokeModular("getstat",this.target,"speedMin")}get max(){return InvokeModular("getstat",this.target,"speedMax")}get current(){return InvokeModular("getspeed",this.target)}getSlotSpeed(e){return InvokeModular("getspeed",this.target,e)}},Stagger:class extends UnitPropertyClass{addAt(e){InvokeModular("breakaddbar",this.target,e)}tremorBurst(e,t){InvokeModular("burst",this.target,e??1),t&&InvokeModular("buff",this.target,"Vibration",0,-t,0)}staggerDamage(e,t){InvokeModular("breakdmg",this.target,e??1,t)}instantStagger(e){InvokeModular("break",this.target,e)}recover(){InvokeModular("breakrecover",this.target)}getThresholds(){return new Array(InvokeModular("getbreakcount",this.target)).fill(null).map((e,t)=>InvokeModular("getbreakvalue",this.target,t))}},Buff:class extends UnitPropertyClass{get(e){return{potency:InvokeModular("getbuff",this.target,e,"stack"),count:InvokeModular("getbuff",this.target,e,"turn"),consumed:InvokeModular("getbuff",this.target,e,"consumed")}}add(e,t,n,a,s){const o=a==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[a];InvokeModular("buff",this.target,e,t,n,o,s?"use":void 0)}inflict(e,t,n,a,s){e.buff.add(t,n,a,s,!0)}getCount(e){return e?InvokeModular("getbuffcount",this.target,e):InvokeModular("getbuffcount",this.target,"neg")+InvokeModular("getbuffcount",this.target,"pos")}},Passive:class extends UnitPropertyClass{add(e,t){InvokeModular("passiveadd",this.target,e,t?"yesdupe":"nodupe")}remove(e){InvokeModular("passiveremove",this.target,e)}has(e){return!!InvokeModular("haspassive",this.target,e)}},Skill:class extends UnitPropertyClass{get basePower(){return InvokeModular("getskillbase",this._targetAsSelfOrTarget)}addBasePower(e){InvokeModular("base",e)}get coinPower(){return InvokeModular("getcoinscale",this._targetAsSelfOrTarget,0)}addCoinPower(e){InvokeModular("scale",e)}getCoinAtIndexPower(e){return InvokeModular("getcoinscale",this._targetAsSelfOrTarget,e)}addClashPower(e){InvokeModular("clash",e)}get power(){return InvokeModular("getcurrentpower",this._targetAsSelfOrTarget)}get rank(){return InvokeModular("getskillrank",this._targetAsSelfOrTarget)}get weight(){return InvokeModular("getskillatkweight",this._targetAsSelfOrTarget)}set weight(e){e|=0;const t=InvokeModular("getskillatkweight",this._targetAsSelfOrTarget);InvokeModular("atkweight",e-t)}get level(){return InvokeModular("getskilllevel",this._targetAsSelfOrTarget)}get correction(){return InvokeModular("getskillatklevel",this._targetAsSelfOrTarget)}get attackType(){return Unit.TYPES.attackTypes.intToName[InvokeModular("getskillatk",this._targetAsSelfOrTarget)]??"none"}set attackType(e){e!=="none"&&InvokeModular("changeatktype",Unit.TYPES.attackTypes.nameToInternal[e])}get sin(){return Unit.TYPES.sin.intToName[InvokeModular("getskillattribute",this._targetAsSelfOrTarget)]??"neutral"}set sin(e){InvokeModular("changeaffinity",Unit.TYPES.sin.nameToInternal[e])}get defenseType(){return Unit.TYPES.defenseType.intToName[InvokeModular("getskilldeftype",this._targetAsSelfOrTarget)]??"none"}get id(){const e=InvokeModular("getskillid");return e!==-1?e:null}get clashable(){return!!InvokeModular("getskillcanduel",this.target)}set clashable(e){InvokeModular("skillcanduel",e?"True":"False")}},Shield:class extends UnitPropertyClass{get amount(){return InvokeModular("getshield",this.target)}gainShield(e,t){InvokeModular("shield",this.target,e,t?"perm":void 0)}},Meta:class extends UnitPropertyClass{get unitId(){return InvokeModular("getid",this.target)}get instId(){return InvokeModular("getinstid",this.target)}get characterId(){return InvokeModular("getcharacterid",this.target)}hasKeywordOrAssociation(e,t){return!!InvokeModular("haskey",this.target,t?"OR":"AND",...Array.isArray(e)?e:[e])}},Ability:class extends UnitPropertyClass{add(e,t,n,a){InvokeModular("addability",this.target,e,t,n,a)}remove(e){InvokeModular("removeability",this.target,e)}}};constructor(e){switch(this.target=e,e){case"Self":this.core=new Unit("SelfCore");break;case"MainTarget":case"Target":this.core=new Unit(e+"Core");break;default:this.core=null}this._battleUnitModel=Utility.GetBattleUnitModelFromTarget(this.target)}_battleUnitModel;core;invoke(e,...t){return InvokeModular(e,this.target,...t)}get faction(){return["enemy","ally"][InvokeModular("getunitfaction",this.target)]}get level(){return InvokeModular("getlevel",this.target)}set level(e){e|=0,InvokeModular("setlevel",this.target,e)}get sp(){return InvokeModular("getsp",this.target)}set sp(e){e|=0;const t=InvokeModular("getsp",this.target);InvokeModular("healsp",this.target,e-t)}actionable(){switch(InvokeModular("isactionable",this.target)){case 0:return!1;case 1:return!0;default:return null}}hp=new Unit.GROUPS.Hp(this);speed=new Unit.GROUPS.Speed(this);stagger=new Unit.GROUPS.Stagger(this);buff=new Unit.GROUPS.Buff(this);passive=new Unit.GROUPS.Passive(this);skill=new Unit.GROUPS.Skill(this);shield=new Unit.GROUPS.Shield(this);meta=new Unit.GROUPS.Meta(this);ability=new Unit.GROUPS.Ability(this);resist=new Proxy(this,{get(e,t){const n=Unit.TYPES.attackTypes.nameToInternal[t];if(n)return InvokeModular("getatkres",e.target,n)/100;const a=Unit.TYPES.sin.nameToInternal[t];return a?InvokeModular("getsinres",e.target,a)/100:0},set(e,t,n){const a=Unit.TYPES.attackTypes.nameToInternal[t];if(a)return InvokeModular("ovwatkres",e.target,a,n*100),!0;const s=Unit.TYPES.sin.nameToInternal[t];return s?(InvokeModular("ovwsinres",e.target,s,n*100),!0):!1}})}const Encounter={get turn(){return InvokeModular("getround")},get wave(){return InvokeModular("getwave")},get id(){return InvokeModular("getencounteruid")}},Mathf={clamp(r,e,t){return Math.min(Math.max(r,e),t)},lerp(r,e,t){return r+(e-r)*t},roundToMultiple(r,e){return Math.round(r/e)*e},floorToMultiple(r,e){return Math.floor(r/e)*e},random(r,e){return r===void 0?Math.random():e===void 0?Math.random()*r:Math.random()*(e-r)+r}},__UnitCache__={registry:new Map,encounterId:null,get(r){return this.registry.get(r)??this.registry.set(r,new Unit("inst"+r)).get(r)},resetIfEncounterUpdated(){this.encounterId!==Encounter.id&&(this.registry.clear(),this.encounterId=Encounter.id)}};function GetUnit(r){__UnitCache__.resetIfEncounterUpdated();try{const e=InvokeModular("getinstid",r);return __UnitCache__.get(e)}catch{return null}}function GetUnits(r){__UnitCache__.resetIfEncounterUpdated();try{return[...Utility.GetInstIdFromMultiTarget(r)].map(t=>__UnitCache__.get(t))}catch{return[]}} """;
 
     public ScriptRuntime(dynamic config = null)
     {
         Main.Logger.LogInfo("ScriptRuntime Init Begun");
-
-        PropertyBag cons = [];
-        PropertyBag acq = [];
-
-        foreach (var (key, value) in MainClass.consequenceDict)
-        {
-            cons.Add(key, (params object[] args) =>
-            {
-                string argsString = string.Join(',', args);
-                value.ExecuteConsequence(
-                    ModularConsequenceRunJavascript.lastSA,
-                    $"{key}({argsString})", argsString,
-                    Array.ConvertAll(args, x => x?.ToString() ?? "")
-                );
-            });
-        }
-
-        foreach (var (key, value) in MainClass.acquirerDict)
-        {
-            acq.Add(key, (params object[] args) =>
-            {
-                string argsString = string.Join(',', args);
-                return value.ExecuteAcquirer(
-                    ModularConsequenceRunJavascript.lastSA,
-                    $"{key}({argsString})", argsString,
-                    Array.ConvertAll(args, x => x?.ToString() ?? "")
-                );
-            });
-        }
-
-        mdlFunctions["do"] = cons;
-        mdlFunctions["get"] = acq;
-        var all = new PropertyBag();
-        foreach (var (key, value) in cons) all[key] = value;
-        foreach (var (key, value) in acq) all[key] = value;
-        mdlFunctions["all"] = all;
-
-        Main.Logger.LogInfo($"Loaded {cons} consqs and {acq} acqs");
-
         Main.Logger.LogInfo("ScriptRuntime Init Done");
     }
 
@@ -222,6 +215,16 @@ public class ScriptRuntime
         string currentScriptName = Path.GetFileNameWithoutExtension(fileDirectory);
 
         Main.Logger.LogInfo($"mod folder is {modFolder}");
+
+
+        // This could cause recursive issues, ill resolve it at a future time.
+        // Copy the collection, and then reload any modules that depend on this file, since they might be importing it.
+        // foreach (var (_, module) in LoadedModules.ToArray())
+        // {
+        //     // If this module depends on a file that is already in the list, reload it.
+        //     if (module.Dependencies.Contains(fileDirectory) && LoadedModules.Any(kv => kv.Value.FileDirectory == fileDirectory))
+        //         module.Reload(this);
+        // }
 
         // Dispose old module if it exists
         if (LoadedModules.TryGetValue(currentScriptName, out var existing))
@@ -248,9 +251,9 @@ public class ScriptRuntime
                 .Select(arg => arg.Trim())
                 .ToHashSet();
 
-            if (args.Contains("import-only"))
+            if (args.Contains("import-only") || args.Contains("do-not-load"))
             {
-                Main.Logger.LogInfo($"File {fileDirectory} is marked as import-only, skipping execution.");
+                Main.Logger.LogInfo($"File {fileDirectory} is to be ignored, skipping execution.");
                 return;
             }
         }
@@ -260,30 +263,15 @@ public class ScriptRuntime
         engine.DocumentSettings.SearchPath = Path.GetDirectoryName(fileDirectory);
         engine.DocumentSettings.Loader.DiscardCachedDocuments();
 
-        // Import Modular and its shorthand.
-        engine.AddHostObject("Modular", mdlFunctions["all"]);
-        engine.AddHostObject("Mdl", mdlFunctions["all"]);
-
-        // Import unique logger
-        engine.AddHostObject("Logger", new
-        {
-            log = (Action<object>)(x => Main.Logger.LogInfo($"[JS] {x}")),
-            error = (Action<object>)(x => Main.Logger.LogError($"[JS] {x}"))
-        });
-
-        // Import global game data and IO access.
-        engine.AddHostObject("EncounterData", StagePatches.encounterData);
-        engine.AddHostObject("GlobalData", StagePatches.globalData);
-        engine.AddHostObject("IO", new IO(modFolder));
-
-        // Import helper classes. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
-        engine.Execute(EXTERNAL_UTILITY_JS);
-
         try
         {
-            var mod = new LoadedModule(engine);
-
+            var mod = new LoadedModule(engine) { FileDirectory = fileDirectory };
             string contents = string.Join("\n", lines);
+
+            mod.Dependencies = [.. getImportsFromJs(contents, fileDirectory)];
+            Main.Logger.LogInfo($"Depends on =>> {string.Join(", ", mod.Dependencies)}");
+
+            LoadDataIntoModule(mod);
 
             // Add the script to the engine.
             engine.DocumentSettings.AddSystemDocument("__main", ModuleCategory.Standard, contents);
@@ -298,7 +286,7 @@ public class ScriptRuntime
             );
 
             Main.Logger.LogInfo($"module is {engine.Script.___module___}");
-            mod.exports = engine.Script.___module___;
+            mod.Exports = engine.Script.___module___;
             Main.Logger.LogInfo($"Got it. adding the module into the list");
             Main.Logger.LogInfo($"Successfully loaded module {currentScriptName}");
 
@@ -312,6 +300,30 @@ public class ScriptRuntime
                 $"Failed parsing/loading {fileName}: {ex}"
             );
         }
+    }
+    private static void LoadDataIntoModule(LoadedModule module)
+    {
+        var engine = module.Engine;
+        // Import Modular caller.
+        engine.AddHostObject("InvokeModular", InvokeModular);
+
+        // Import unique logger
+        engine.AddHostObject("logger", new
+        {
+            log = (Action<object>)(x => Main.Logger.LogInfo($"[JS] {x}")),
+            error = (Action<object>)(x => Main.Logger.LogError($"[JS] {x}"))
+        });
+
+        // Import global game data and IO access.
+        engine.AddHostObject("EncounterData", StagePatches.encounterData);
+        engine.AddHostObject("GlobalData", StagePatches.globalData);
+
+        // engine.AddHostObject("IO", new IO(module.ModFolder));
+
+        engine.AddHostType("Utility", typeof(LetheJavascript.Modular.Utility));
+
+        // Import helper classes. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
+        engine.Execute(EXTERNAL_UTILITY_JS);
     }
     public void loadLetheJavascriptFolder(string folderDirectory)
     {
@@ -328,7 +340,7 @@ public class ScriptRuntime
         try
         {
             // Get the module's method, cast it, and then try to invoke it.
-            var func = module.exports.InvokeMethod(method, args);
+            var func = module.Exports.InvokeMethod(method, args);
         }
         catch (Exception ex)
         {
@@ -367,7 +379,44 @@ public class ScriptRuntime
             }
         }
     }
+    private static string[] getImportsFromJs(string code, string filePath)
+    {
+        Regex regex = new(@"""(.*)""");
+        List<string> imports = [];
 
+        using (StringReader reader = new(code))
+        {
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                line = line.Trim();
+                if (line.StartsWith("import "))
+                {
+                    var match = regex.Match(line);
+                    foreach (Capture capture in match.Groups[1].Captures)
+                    {
+                        imports.Add(capture.Value);
+                        Main.Logger.LogInfo("Found import: " + capture.Value);
+                    }
+                }
+            }
+        }
+
+        return [.. imports.Select(import =>
+        {
+            // Turn relative paths in absolute paths.
+            if (import.StartsWith("."))
+            {
+                return Path.GetFullPath(
+                    Path.Join(
+                        Path.GetDirectoryName(filePath),
+                        import
+                    )
+                );
+            }
+            return import;
+        })];
+    }
     private readonly Dictionary<string, FileSystemWatcher> watchers = [];
     /// <summary>
     /// Listen for a ./javascript folder change.

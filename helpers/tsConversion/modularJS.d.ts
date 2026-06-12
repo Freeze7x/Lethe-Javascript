@@ -568,7 +568,7 @@ type ConsequenceFunctions = {
 	@param var_1 See [Multi-Target](https://rentry.co/glitchscript#target-arguments)
 	@param var_2 `VALUE_#` | any integer (Add a % to the end to heal by percentage of max HP of the target. Example: "20%", "VALUE_0%")
 	*/
-	healhp(var_1: MultiTarget, var_2: number): void
+	healhp(var_1: MultiTarget, var_2: number | `${number}%`): void
 
 	/**
 	Tremor Burst.
