@@ -1,15 +1,10 @@
-// # Lethe do-not-load
-
 /*
-    Providing `// # Lethe ` at the start of a file allows
-    you to specify space-separated flags that control how
-    or if the file is loaded.
-
-    The available tags are:
-    - `do-not-load`: The file will not be loaded at all. This is useful for files that are only meant to be used as templates or for reference.
-    - `import-only`: The file will not be loaded at all. Use this over `do-not-load` for clarity when you want a script to be imported.
-        Keep in mind that imported scripts do not have access to the provided globals.
+    `ScriptBehaviour` is an array global that you can assign
+    to control how or if the file is loaded.
 */
+ScriptBehaviour = ["do-not-load"]
+
+// ts is outdated
 
 /*
     Some extra globals are provided to you, such as:
@@ -44,3 +39,5 @@ export function Example01() {
     const toAdd = Math.min(Math.floor(bleed.potency / 4), 3);
     self.skill.addCoinPower(toAdd);
 }
+
+ScriptBehaviour = ["do-not-load"];

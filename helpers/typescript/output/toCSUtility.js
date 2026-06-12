@@ -10,8 +10,9 @@ class UnitPropertyClass {
         return this.parent.target;
     }
     ;
-    get _targetAsSelfOrTarget() {
-        return this.parent.target;
+    get getTargetOrSelf() {
+        return this.parent.getIsTargetOrSelf();
+        // return this.parent.target as "Self";
     }
 }
 /** A class representing a unit in the game. */
@@ -79,6 +80,14 @@ class Unit {
             }
         }
     };
+    /** Returns a string usable by functions that only take "Self" or "Target". */
+    getIsTargetOrSelf() {
+        if (this.invoke("issameunit", "Self"))
+            return "Self";
+        if (this.invoke("issameunit", "MainTarget"))
+            return "Target";
+        return "";
+    }
     /** Classes that serve as categories for properties. */
     static GROUPS = {
         Hp: class extends UnitPropertyClass {
@@ -235,51 +244,64 @@ class Unit {
         },
         Skill: class extends UnitPropertyClass {
             /** The current skill's base power. */
-            get basePower() { return InvokeModular("getskillbase", this._targetAsSelfOrTarget); }
+            get basePower() { return InvokeModular("getskillbase", this.getTargetOrSelf); }
             /** Add to the skill's base power. */
             addBasePower(v) { InvokeModular("base", v); }
             /** The current skill's coin power. */
-            get coinPower() { return InvokeModular("getcoinscale", this._targetAsSelfOrTarget, 0); }
+            get coinPower() { return InvokeModular("getcoinscale", this.getTargetOrSelf, 0); }
             /** Add to the current skill's coin power. */
             addCoinPower(v) { InvokeModular("scale", v); }
             /** The current skill's coin power at a specific index. */
-            getCoinAtIndexPower(index) { return InvokeModular("getcoinscale", this._targetAsSelfOrTarget, index); }
+            getCoinAtIndexPower(index) { return InvokeModular("getcoinscale", this.getTargetOrSelf, index); }
             /** Add to the current skill's clash power. */
             addClashPower(v) { InvokeModular("clash", v); }
             /** Get the current skill's power. */
-            get power() { return InvokeModular("getcurrentpower", this._targetAsSelfOrTarget); }
+            get power() { return InvokeModular("getcurrentpower", this.getTargetOrSelf); }
             /** Get the current skill's rank. */
-            get rank() { return InvokeModular("getskillrank", this._targetAsSelfOrTarget); }
+            get rank() { return InvokeModular("getskillrank", this.getTargetOrSelf); }
             /** Get or set the skill's attack weight. */
-            get weight() { return InvokeModular("getskillatkweight", this._targetAsSelfOrTarget); }
+            get weight() { return InvokeModular("getskillatkweight", this.getTargetOrSelf); }
             set weight(v) {
                 v |= 0;
-                const cur = InvokeModular("getskillatkweight", this._targetAsSelfOrTarget);
+                const cur = InvokeModular("getskillatkweight", this.getTargetOrSelf);
                 InvokeModular("atkweight", v - cur);
             }
             /** Get the current skill's level correction + this unit's offense level. */
-            get level() { return InvokeModular("getskilllevel", this._targetAsSelfOrTarget); }
+            get level() { return InvokeModular("getskilllevel", this.getTargetOrSelf); }
             /** Get the current skill's level correction. */
-            get correction() { return InvokeModular("getskillatklevel", this._targetAsSelfOrTarget); }
+            get correction() { return InvokeModular("getskillatklevel", this.getTargetOrSelf); }
             /** The current skill's attack type. */
             get attackType() {
-                return Unit.TYPES.attackTypes.intToName[InvokeModular("getskillatk", this._targetAsSelfOrTarget)] ?? "none";
+                return Unit.TYPES.attackTypes.intToName[InvokeModular("getskillatk", this.getTargetOrSelf)] ?? "none";
             }
             set attackType(v) { if (v !== "none")
                 InvokeModular("changeatktype", Unit.TYPES.attackTypes.nameToInternal[v]); }
             /** The current skill's sin affinity. */
             get sin() {
-                return Unit.TYPES.sin.intToName[InvokeModular("getskillattribute", this._targetAsSelfOrTarget)] ?? "neutral";
+                return Unit.TYPES.sin.intToName[InvokeModular("getskillattribute", this.getTargetOrSelf)] ?? "neutral";
             }
             set sin(v) { InvokeModular("changeaffinity", Unit.TYPES.sin.nameToInternal[v]); }
             /** The current skill's defense type, if any. */
             get defenseType() {
-                return Unit.TYPES.defenseType.intToName[InvokeModular("getskilldeftype", this._targetAsSelfOrTarget)] ?? "none";
+                return Unit.TYPES.defenseType.intToName[InvokeModular("getskilldeftype", this.getTargetOrSelf)] ?? "none";
             }
             /** Get the skill's ID. */
             get id() {
                 const id = InvokeModular("getskillid");
                 return id !== -1 ? id : null;
+            }
+            get operator() {
+                switch (InvokeModular("getcoinoperator", this.getTargetOrSelf, 0)) {
+                    case 1: return "+";
+                    case 2: return "-";
+                    case 3: return "*";
+                    default: return "?";
+                }
+            }
+            set operator(v) {
+                if (v === "?")
+                    return;
+                InvokeModular("scale", { "+": "ADD", "-": "SUB", "*": "MUL" }[v]);
             }
             /** Whether the current skill is clashable. */
             get clashable() { return !!InvokeModular("getskillcanduel", this.target); }
@@ -488,3 +510,14 @@ function GetUnits(target) {
         return [];
     }
 }
+/** Declares the behaviour of this file.
+*
+* Ensure that the array contains explict strings, and not variable/property references.
+*
+* The top-most instance of redeclaration in the file will be read.
+* * `do-not-load`/`import-only` prevents the file from being loaded at all.
+*     * `import-only` should be used to clarify it's an import.
+*     * `do-not-load` should be used to "deactivate" scripts.
+*/
+let ScriptBehaviour;
+ScriptBehaviour = [];

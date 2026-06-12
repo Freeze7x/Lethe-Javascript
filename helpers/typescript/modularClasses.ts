@@ -5,14 +5,14 @@ abstract class UnitPropertyClass {
     protected get target() {
         return this.parent.target;
     };
-    protected get _targetAsSelfOrTarget() {
-        return this.parent.target as "Self";
+    protected get getTargetOrSelf() {
+        return this.parent.getIsTargetOrSelf();
+        // return this.parent.target as "Self";
     }
 }
 
 /** A class representing a unit in the game. */
 class Unit {
-
     private static TYPES = {
         attackTypes: {
             intToName: {
@@ -76,15 +76,22 @@ class Unit {
         }
     } as const;
 
+    /** Returns a string usable by functions that only take "Self" or "Target". */
+    getIsTargetOrSelf() {
+        if (this.invoke("issameunit", "Self")) return "Self";
+        if (this.invoke("issameunit", "MainTarget")) return "Target";
+        return "";
+    }
+
     /** Classes that serve as categories for properties. */
     private static GROUPS = {
         Hp: class extends UnitPropertyClass {
             /** The maximum HP this unit can have. */
-            get max() { return InvokeModular("gethp", this.target, "max") }
+            get max() { return InvokeModular("gethp", this.target, "max"); }
             set max(v) {
                 v |= 0;
                 //@ts-ignore
-                InvokeModular("setmaxhp", this.target, v)
+                InvokeModular("setmaxhp", this.target, v);
             }
             /** How much HP this unit has. */
             get current() { return InvokeModular("gethp", this.target, "normal"); }
@@ -95,11 +102,11 @@ class Unit {
             }
 
             /** The HP% of this unit. */
-            get normalized() { return this.current / this.max }
+            get normalized() { return this.current / this.max; }
 
             /** Heal this unit by a certain amount. */
             heal(amount: number) {
-                InvokeModular("healhp", this.target, amount)
+                InvokeModular("healhp", this.target, amount);
             }
 
             /** Heal this unit by a percentage of its max HP. */
@@ -109,11 +116,11 @@ class Unit {
         },
         Speed: class extends UnitPropertyClass {
             /** The minimum speed roll for this unit. */
-            get min() { return InvokeModular("getstat", this.target, "speedMin") }
+            get min() { return InvokeModular("getstat", this.target, "speedMin"); }
             /** The maximum speed roll for this unit. */
-            get max() { return InvokeModular("getstat", this.target, "speedMax") }
+            get max() { return InvokeModular("getstat", this.target, "speedMax"); }
             /** The current speed for this unit. */
-            get current() { return InvokeModular("getspeed", this.target) }
+            get current() { return InvokeModular("getspeed", this.target); }
             /**
              * Get the speed of a specific slot.
              * @param index - The slot index
@@ -124,7 +131,7 @@ class Unit {
             /**
              * Add a stagger bar at a specific HP threshold.
              */
-            addAt(hp: number) { InvokeModular("breakaddbar", this.target, hp) }
+            addAt(hp: number) { InvokeModular("breakaddbar", this.target, hp); }
             /**
              * Trigger tremor burst on this unit.
              * @param times - Number of times to trigger. (defaults to once)
@@ -162,7 +169,7 @@ class Unit {
             getThresholds() {
                 return new Array(InvokeModular("getbreakcount", this.target)).fill(null).map((_, index) => {
                     return InvokeModular("getbreakvalue", this.target, index);
-                })
+                });
             }
         },
         Buff: class extends UnitPropertyClass {
@@ -175,7 +182,7 @@ class Unit {
                     potency: InvokeModular("getbuff", this.target, keyword, "stack") as number,
                     count: InvokeModular("getbuff", this.target, keyword, "turn") as number,
                     consumed: InvokeModular("getbuff", this.target, keyword, "consumed") as number,
-                }
+                };
             }
             /**
              * Give this unit a buff.
@@ -220,85 +227,98 @@ class Unit {
              * @param allowDupe If true, allows duplicates of the passive to be added. (default: false)
              */
             add(id: number, allowDupe?: boolean) {
-                InvokeModular("passiveadd", this.target, id, allowDupe ? "yesdupe" : "nodupe")
+                InvokeModular("passiveadd", this.target, id, allowDupe ? "yesdupe" : "nodupe");
             }
             /**
              * Removes a passive from this unit.
              * @param id The passive ID to remove.
              */
             remove(id: number) {
-                InvokeModular("passiveremove", this.target, id)
+                InvokeModular("passiveremove", this.target, id);
             }
             /**
              * Check to see if this unit has a specific passive.
              * @param id The passive ID to check.
              */
             has(id: number) {
-                return !!InvokeModular("haspassive", this.target, id)
+                return !!InvokeModular("haspassive", this.target, id);
             }
         },
         Skill: class extends UnitPropertyClass {
             /** The current skill's base power. */
-            get basePower() { return InvokeModular("getskillbase", this._targetAsSelfOrTarget) }
+            get basePower() { return InvokeModular("getskillbase", this.getTargetOrSelf); }
             /** Add to the skill's base power. */
             addBasePower(v: number) { InvokeModular("base", v); }
 
             /** The current skill's coin power. */
-            get coinPower() { return InvokeModular("getcoinscale", this._targetAsSelfOrTarget, 0) }
+            get coinPower() { return InvokeModular("getcoinscale", this.getTargetOrSelf, 0); }
             /** Add to the current skill's coin power. */
             addCoinPower(v: number) { InvokeModular("scale", v); }
             /** The current skill's coin power at a specific index. */
-            getCoinAtIndexPower(index: number) { return InvokeModular("getcoinscale", this._targetAsSelfOrTarget, index) }
+            getCoinAtIndexPower(index: number) { return InvokeModular("getcoinscale", this.getTargetOrSelf, index); }
 
             /** Add to the current skill's clash power. */
-            addClashPower(v: number) { InvokeModular("clash", v) }
+            addClashPower(v: number) { InvokeModular("clash", v); }
 
             /** Get the current skill's power. */
-            get power() { return InvokeModular("getcurrentpower", this._targetAsSelfOrTarget); }
+            get power() { return InvokeModular("getcurrentpower", this.getTargetOrSelf); }
 
             /** Get the current skill's rank. */
-            get rank() { return InvokeModular("getskillrank", this._targetAsSelfOrTarget); }
+            get rank() { return InvokeModular("getskillrank", this.getTargetOrSelf); }
 
             /** Get or set the skill's attack weight. */
-            get weight() { return InvokeModular("getskillatkweight", this._targetAsSelfOrTarget) }
+            get weight() { return InvokeModular("getskillatkweight", this.getTargetOrSelf); }
             set weight(v) {
                 v |= 0;
-                const cur = InvokeModular("getskillatkweight", this._targetAsSelfOrTarget);
+                const cur = InvokeModular("getskillatkweight", this.getTargetOrSelf);
                 InvokeModular("atkweight", v - cur);
             }
 
             /** Get the current skill's level correction + this unit's offense level. */
-            get level() { return InvokeModular("getskilllevel", this._targetAsSelfOrTarget) }
+            get level() { return InvokeModular("getskilllevel", this.getTargetOrSelf); }
             /** Get the current skill's level correction. */
-            get correction() { return InvokeModular("getskillatklevel", this._targetAsSelfOrTarget) }
+            get correction() { return InvokeModular("getskillatklevel", this.getTargetOrSelf); }
 
             /** The current skill's attack type. */
             get attackType() {
                 return Unit.TYPES.attackTypes.intToName[
-                    InvokeModular<0 | 1 | 2 | 3>("getskillatk", this._targetAsSelfOrTarget)
-                ] ?? "none"
+                    InvokeModular<0 | 1 | 2 | 3>("getskillatk", this.getTargetOrSelf)
+                ] ?? "none";
             }
-            set attackType(v) { if (v !== "none") InvokeModular("changeatktype", Unit.TYPES.attackTypes.nameToInternal[v]) }
+            set attackType(v) { if (v !== "none") InvokeModular("changeatktype", Unit.TYPES.attackTypes.nameToInternal[v]); }
 
             /** The current skill's sin affinity. */
             get sin() {
                 return Unit.TYPES.sin.intToName[
-                    InvokeModular("getskillattribute", this._targetAsSelfOrTarget) as keyof typeof Unit.TYPES.sin.intToName
-                ] ?? "neutral"
+                    InvokeModular("getskillattribute", this.getTargetOrSelf) as keyof typeof Unit.TYPES.sin.intToName
+                ] ?? "neutral";
             }
             set sin(v) { InvokeModular("changeaffinity", Unit.TYPES.sin.nameToInternal[v]); }
 
             /** The current skill's defense type, if any. */
             get defenseType() {
                 return Unit.TYPES.defenseType.intToName[
-                    InvokeModular("getskilldeftype", this._targetAsSelfOrTarget) as keyof typeof Unit.TYPES.defenseType.intToName
-                ] ?? "none"
+                    InvokeModular("getskilldeftype", this.getTargetOrSelf) as keyof typeof Unit.TYPES.defenseType.intToName
+                ] ?? "none";
             }
 
             /** Get the skill's ID. */
             get id() {
                 const id = InvokeModular("getskillid",) as number;
                 return id !== -1 ? id : null;
+            }
+
+            get operator() {
+                switch (InvokeModular("getcoinoperator", this.getTargetOrSelf, 0)) {
+                    case 1: return "+";
+                    case 2: return "-";
+                    case 3: return "*";
+                    default: return "?";
+                }
+            }
+            set operator(v) {
+                if (v === "?") return;
+                InvokeModular("scale", { "+": "ADD", "-": "SUB", "*": "MUL" }[v]);
             }
 
             /** Whether the current skill is clashable. */
@@ -319,11 +339,11 @@ class Unit {
         },
         Meta: class extends UnitPropertyClass {
             /** This unit's UID. */
-            get unitId() { return InvokeModular("getid", this.target) }
+            get unitId() { return InvokeModular("getid", this.target); }
             /** This unit's instance ID. */
-            get instId() { return InvokeModular("getinstid", this.target) }
+            get instId() { return InvokeModular("getinstid", this.target); }
             /** This unit's Character ID. Only for Sinners */
-            get characterId() { return InvokeModular("getcharacterid", this.target) }
+            get characterId() { return InvokeModular("getcharacterid", this.target); }
             /**
             * Check if this unit has a keyword or association.
             * @param keywordAssoc - A keyword or array of keywords to check
@@ -344,7 +364,7 @@ class Unit {
                 InvokeModular("removeability", this.target, systemAbility);
             }
         },
-    } as const satisfies Record<string, typeof UnitPropertyClass>
+    } as const satisfies Record<string, typeof UnitPropertyClass>;
 
     constructor(public readonly target: string) {
         switch (target) {
@@ -358,7 +378,7 @@ class Unit {
             default:
                 this.core = null;
         }
-        this._battleUnitModel = Utility.GetBattleUnitModelFromTarget(this.target)
+        this._battleUnitModel = Utility.GetBattleUnitModelFromTarget(this.target);
     }
     /** Represent the in-game Battle Unit Model. */
     _battleUnitModel: any | null;
@@ -375,14 +395,14 @@ class Unit {
     get faction() { return (["enemy", "ally"] as const)[InvokeModular("getunitfaction", this.target)]; }
 
     /** The level of this unit. */
-    get level() { return InvokeModular("getlevel", this.target) }
+    get level() { return InvokeModular("getlevel", this.target); }
     set level(v) {
         v |= 0;
-        InvokeModular("setlevel", this.target, v)
+        InvokeModular("setlevel", this.target, v);
     }
 
     /** The SP value for this unit. */
-    get sp() { return InvokeModular("getsp", this.target) }
+    get sp() { return InvokeModular("getsp", this.target); }
     set sp(v) {
         v |= 0;
         const cur = InvokeModular("getsp", this.target);
@@ -397,7 +417,7 @@ class Unit {
         switch (InvokeModular("isactionable", this.target)) {
             case 0: return false;
             case 1: return true;
-            default: return null
+            default: return null;
         }
     }
     hp = new Unit.GROUPS.Hp(this);
@@ -411,7 +431,7 @@ class Unit {
     ability = new Unit.GROUPS.Ability(this);
     resist = new Proxy(this, {
         get(self, p) {
-            const atkType = Unit.TYPES.attackTypes.nameToInternal[p as keyof typeof Unit.TYPES.attackTypes.nameToInternal]
+            const atkType = Unit.TYPES.attackTypes.nameToInternal[p as keyof typeof Unit.TYPES.attackTypes.nameToInternal];
             if (atkType)
                 return InvokeModular("getatkres", self.target, atkType) / 100;
 
@@ -423,7 +443,7 @@ class Unit {
             return 0;
         },
         set(self, p, value) {
-            const atkType = Unit.TYPES.attackTypes.nameToInternal[p as keyof typeof Unit.TYPES.attackTypes.nameToInternal]
+            const atkType = Unit.TYPES.attackTypes.nameToInternal[p as keyof typeof Unit.TYPES.attackTypes.nameToInternal];
             if (atkType) {
                 InvokeModular("ovwatkres", self.target, atkType, value * 100);
                 return true;
@@ -435,7 +455,7 @@ class Unit {
             }
             return false;
         }
-    }) as unknown as { [K in keyof (typeof Unit.TYPES.attackTypes.nameToInternal & typeof Unit.TYPES.sin.nameToInternal)]: number }
+    }) as unknown as { [K in keyof (typeof Unit.TYPES.attackTypes.nameToInternal & typeof Unit.TYPES.sin.nameToInternal)]: number };
 }
 
 /** A collection of properties related to the current encounter. */
@@ -443,7 +463,7 @@ const Encounter = {
     get turn() { return InvokeModular("getround",); },
     get wave() { return InvokeModular("getwave",); },
     get id() { return InvokeModular("getencounteruid"); }
-}
+};
 
 /** A collection of mathematical functions not available in the standard Math object. */
 const Mathf = {
@@ -469,7 +489,7 @@ const Mathf = {
         if (y === undefined) return Math.random() * x;
         return (Math.random() * (y - x)) + x;
     }
-}
+};
 
 const __UnitCache__ = {
     registry: new Map<number, Unit>(),
@@ -483,7 +503,7 @@ const __UnitCache__ = {
             this.encounterId = Encounter.id;
         }
     }
-}
+};
 
 type SingleTarget =
     "Self" | "MainTarget" |
@@ -528,4 +548,19 @@ function GetUnits(target: MultiTarget | (string & {})) {
         return [];
     }
 }
+type ScriptProperties =
+    /** Test */
+    "do-not-load" |
+    "import-only";
+/** Declares the behaviour of this file.
+* 
+* Ensure that the array contains explict strings, and not variable/property references.
+* 
+* The top-most instance of redeclaration in the file will be read.
+* * `do-not-load`/`import-only` prevents the file from being loaded at all.
+*     * `import-only` should be used to clarify it's an import.
+*     * `do-not-load` should be used to "deactivate" scripts.
+*/
+let ScriptBehaviour: ScriptProperties[];
 
+ScriptBehaviour = [];

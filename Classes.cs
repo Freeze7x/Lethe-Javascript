@@ -198,7 +198,7 @@ public class ScriptRuntime
     }
 
     // ts is laced and that damn dog got it im so sorry.
-    private const string EXTERNAL_UTILITY_JS = """ "use strict";class UnitPropertyClass{parent;constructor(e){this.parent=e}get target(){return this.parent.target}get _targetAsSelfOrTarget(){return this.parent.target}}class Unit{target;static TYPES={attackTypes:{intToName:{3:"none",0:"slash",1:"pierce",2:"blunt"},nameToInt:{slash:0,pierce:1,blunt:2},nameToInternal:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{intToName:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},nameToInt:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},nameToInternal:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{intToName:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},nameToInt:{none:0,guard:1,evade:2,counter:3,attack:4}}};static GROUPS={Hp:class extends UnitPropertyClass{get max(){return InvokeModular("gethp",this.target,"max")}set max(e){e|=0,InvokeModular("setmaxhp",this.target,e)}get current(){return InvokeModular("gethp",this.target,"normal")}set current(e){e|=0;const t=InvokeModular("gethp",this.target,"normal");InvokeModular("healhp",this.target,e-t)}get normalized(){return this.current/this.max}heal(e){InvokeModular("healhp",this.target,e)}healPercent(e){InvokeModular("healhp",this.target,`${e}%`)}},Speed:class extends UnitPropertyClass{get min(){return InvokeModular("getstat",this.target,"speedMin")}get max(){return InvokeModular("getstat",this.target,"speedMax")}get current(){return InvokeModular("getspeed",this.target)}getSlotSpeed(e){return InvokeModular("getspeed",this.target,e)}},Stagger:class extends UnitPropertyClass{addAt(e){InvokeModular("breakaddbar",this.target,e)}tremorBurst(e,t){InvokeModular("burst",this.target,e??1),t&&InvokeModular("buff",this.target,"Vibration",0,-t,0)}staggerDamage(e,t){InvokeModular("breakdmg",this.target,e??1,t)}instantStagger(e){InvokeModular("break",this.target,e)}recover(){InvokeModular("breakrecover",this.target)}getThresholds(){return new Array(InvokeModular("getbreakcount",this.target)).fill(null).map((e,t)=>InvokeModular("getbreakvalue",this.target,t))}},Buff:class extends UnitPropertyClass{get(e){return{potency:InvokeModular("getbuff",this.target,e,"stack"),count:InvokeModular("getbuff",this.target,e,"turn"),consumed:InvokeModular("getbuff",this.target,e,"consumed")}}add(e,t,n,a,s){const o=a==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[a];InvokeModular("buff",this.target,e,t,n,o,s?"use":void 0)}inflict(e,t,n,a,s){e.buff.add(t,n,a,s,!0)}getCount(e){return e?InvokeModular("getbuffcount",this.target,e):InvokeModular("getbuffcount",this.target,"neg")+InvokeModular("getbuffcount",this.target,"pos")}},Passive:class extends UnitPropertyClass{add(e,t){InvokeModular("passiveadd",this.target,e,t?"yesdupe":"nodupe")}remove(e){InvokeModular("passiveremove",this.target,e)}has(e){return!!InvokeModular("haspassive",this.target,e)}},Skill:class extends UnitPropertyClass{get basePower(){return InvokeModular("getskillbase",this._targetAsSelfOrTarget)}addBasePower(e){InvokeModular("base",e)}get coinPower(){return InvokeModular("getcoinscale",this._targetAsSelfOrTarget,0)}addCoinPower(e){InvokeModular("scale",e)}getCoinAtIndexPower(e){return InvokeModular("getcoinscale",this._targetAsSelfOrTarget,e)}addClashPower(e){InvokeModular("clash",e)}get power(){return InvokeModular("getcurrentpower",this._targetAsSelfOrTarget)}get rank(){return InvokeModular("getskillrank",this._targetAsSelfOrTarget)}get weight(){return InvokeModular("getskillatkweight",this._targetAsSelfOrTarget)}set weight(e){e|=0;const t=InvokeModular("getskillatkweight",this._targetAsSelfOrTarget);InvokeModular("atkweight",e-t)}get level(){return InvokeModular("getskilllevel",this._targetAsSelfOrTarget)}get correction(){return InvokeModular("getskillatklevel",this._targetAsSelfOrTarget)}get attackType(){return Unit.TYPES.attackTypes.intToName[InvokeModular("getskillatk",this._targetAsSelfOrTarget)]??"none"}set attackType(e){e!=="none"&&InvokeModular("changeatktype",Unit.TYPES.attackTypes.nameToInternal[e])}get sin(){return Unit.TYPES.sin.intToName[InvokeModular("getskillattribute",this._targetAsSelfOrTarget)]??"neutral"}set sin(e){InvokeModular("changeaffinity",Unit.TYPES.sin.nameToInternal[e])}get defenseType(){return Unit.TYPES.defenseType.intToName[InvokeModular("getskilldeftype",this._targetAsSelfOrTarget)]??"none"}get id(){const e=InvokeModular("getskillid");return e!==-1?e:null}get clashable(){return!!InvokeModular("getskillcanduel",this.target)}set clashable(e){InvokeModular("skillcanduel",e?"True":"False")}},Shield:class extends UnitPropertyClass{get amount(){return InvokeModular("getshield",this.target)}gainShield(e,t){InvokeModular("shield",this.target,e,t?"perm":void 0)}},Meta:class extends UnitPropertyClass{get unitId(){return InvokeModular("getid",this.target)}get instId(){return InvokeModular("getinstid",this.target)}get characterId(){return InvokeModular("getcharacterid",this.target)}hasKeywordOrAssociation(e,t){return!!InvokeModular("haskey",this.target,t?"OR":"AND",...Array.isArray(e)?e:[e])}},Ability:class extends UnitPropertyClass{add(e,t,n,a){InvokeModular("addability",this.target,e,t,n,a)}remove(e){InvokeModular("removeability",this.target,e)}}};constructor(e){switch(this.target=e,e){case"Self":this.core=new Unit("SelfCore");break;case"MainTarget":case"Target":this.core=new Unit(e+"Core");break;default:this.core=null}this._battleUnitModel=Utility.GetBattleUnitModelFromTarget(this.target)}_battleUnitModel;core;invoke(e,...t){return InvokeModular(e,this.target,...t)}get faction(){return["enemy","ally"][InvokeModular("getunitfaction",this.target)]}get level(){return InvokeModular("getlevel",this.target)}set level(e){e|=0,InvokeModular("setlevel",this.target,e)}get sp(){return InvokeModular("getsp",this.target)}set sp(e){e|=0;const t=InvokeModular("getsp",this.target);InvokeModular("healsp",this.target,e-t)}actionable(){switch(InvokeModular("isactionable",this.target)){case 0:return!1;case 1:return!0;default:return null}}hp=new Unit.GROUPS.Hp(this);speed=new Unit.GROUPS.Speed(this);stagger=new Unit.GROUPS.Stagger(this);buff=new Unit.GROUPS.Buff(this);passive=new Unit.GROUPS.Passive(this);skill=new Unit.GROUPS.Skill(this);shield=new Unit.GROUPS.Shield(this);meta=new Unit.GROUPS.Meta(this);ability=new Unit.GROUPS.Ability(this);resist=new Proxy(this,{get(e,t){const n=Unit.TYPES.attackTypes.nameToInternal[t];if(n)return InvokeModular("getatkres",e.target,n)/100;const a=Unit.TYPES.sin.nameToInternal[t];return a?InvokeModular("getsinres",e.target,a)/100:0},set(e,t,n){const a=Unit.TYPES.attackTypes.nameToInternal[t];if(a)return InvokeModular("ovwatkres",e.target,a,n*100),!0;const s=Unit.TYPES.sin.nameToInternal[t];return s?(InvokeModular("ovwsinres",e.target,s,n*100),!0):!1}})}const Encounter={get turn(){return InvokeModular("getround")},get wave(){return InvokeModular("getwave")},get id(){return InvokeModular("getencounteruid")}},Mathf={clamp(r,e,t){return Math.min(Math.max(r,e),t)},lerp(r,e,t){return r+(e-r)*t},roundToMultiple(r,e){return Math.round(r/e)*e},floorToMultiple(r,e){return Math.floor(r/e)*e},random(r,e){return r===void 0?Math.random():e===void 0?Math.random()*r:Math.random()*(e-r)+r}},__UnitCache__={registry:new Map,encounterId:null,get(r){return this.registry.get(r)??this.registry.set(r,new Unit("inst"+r)).get(r)},resetIfEncounterUpdated(){this.encounterId!==Encounter.id&&(this.registry.clear(),this.encounterId=Encounter.id)}};function GetUnit(r){__UnitCache__.resetIfEncounterUpdated();try{const e=InvokeModular("getinstid",r);return __UnitCache__.get(e)}catch{return null}}function GetUnits(r){__UnitCache__.resetIfEncounterUpdated();try{return[...Utility.GetInstIdFromMultiTarget(r)].map(t=>__UnitCache__.get(t))}catch{return[]}} """;
+    private const string EXTERNAL_UTILITY_JS = """ "use strict";class UnitPropertyClass{parent;constructor(e){this.parent=e}get target(){return this.parent.target}get getTargetOrSelf(){return this.parent.getIsTargetOrSelf()}}class Unit{target;static TYPES={attackTypes:{intToName:{3:"none",0:"slash",1:"pierce",2:"blunt"},nameToInt:{slash:0,pierce:1,blunt:2},nameToInternal:{blunt:"HIT",slash:"SLASH",pierce:"PENETRATE"}},sin:{intToName:{0:"wrath",1:"lust",2:"sloth",3:"gluttony",4:"gloom",5:"pride",6:"envy",7:"white",8:"black",9:"red",10:"pale",11:"neutral"},nameToInt:{wrath:0,lust:1,sloth:2,gluttony:3,gloom:4,pride:5,envy:6,white:7,black:8,red:9,pale:10,neutral:11},nameToInternal:{wrath:"CRIMSON",lust:"SCARLET",sloth:"AMBER",gluttony:"SHAMROCK",gloom:"AZURE",pride:"INDIGO",envy:"VIOLET",white:"WHITE",black:"BLACK",red:"RED",pale:"PALE",neutral:"NEUTRAL"}},defenseType:{intToName:{0:"none",1:"guard",2:"evade",3:"counter",4:"attack"},nameToInt:{none:0,guard:1,evade:2,counter:3,attack:4}}};getIsTargetOrSelf(){return this.invoke("issameunit","Self")?"Self":this.invoke("issameunit","MainTarget")?"Target":""}static GROUPS={Hp:class extends UnitPropertyClass{get max(){return InvokeModular("gethp",this.target,"max")}set max(e){e|=0,InvokeModular("setmaxhp",this.target,e)}get current(){return InvokeModular("gethp",this.target,"normal")}set current(e){e|=0;const t=InvokeModular("gethp",this.target,"normal");InvokeModular("healhp",this.target,e-t)}get normalized(){return this.current/this.max}heal(e){InvokeModular("healhp",this.target,e)}healPercent(e){InvokeModular("healhp",this.target,`${e}%`)}},Speed:class extends UnitPropertyClass{get min(){return InvokeModular("getstat",this.target,"speedMin")}get max(){return InvokeModular("getstat",this.target,"speedMax")}get current(){return InvokeModular("getspeed",this.target)}getSlotSpeed(e){return InvokeModular("getspeed",this.target,e)}},Stagger:class extends UnitPropertyClass{addAt(e){InvokeModular("breakaddbar",this.target,e)}tremorBurst(e,t){InvokeModular("burst",this.target,e??1),t&&InvokeModular("buff",this.target,"Vibration",0,-t,0)}staggerDamage(e,t){InvokeModular("breakdmg",this.target,e??1,t)}instantStagger(e){InvokeModular("break",this.target,e)}recover(){InvokeModular("breakrecover",this.target)}getThresholds(){return new Array(InvokeModular("getbreakcount",this.target)).fill(null).map((e,t)=>InvokeModular("getbreakvalue",this.target,t))}},Buff:class extends UnitPropertyClass{get(e){return{potency:InvokeModular("getbuff",this.target,e,"stack"),count:InvokeModular("getbuff",this.target,e,"turn"),consumed:InvokeModular("getbuff",this.target,e,"consumed")}}add(e,t,n,a,o){const s=a==null?0:{"this turn":0,"next turn":1,"this and next turn":2}[a];InvokeModular("buff",this.target,e,t,n,s,o?"use":void 0)}inflict(e,t,n,a,o){e.buff.add(t,n,a,o,!0)}getCount(e){return e?InvokeModular("getbuffcount",this.target,e):InvokeModular("getbuffcount",this.target,"neg")+InvokeModular("getbuffcount",this.target,"pos")}},Passive:class extends UnitPropertyClass{add(e,t){InvokeModular("passiveadd",this.target,e,t?"yesdupe":"nodupe")}remove(e){InvokeModular("passiveremove",this.target,e)}has(e){return!!InvokeModular("haspassive",this.target,e)}},Skill:class extends UnitPropertyClass{get basePower(){return InvokeModular("getskillbase",this.getTargetOrSelf)}addBasePower(e){InvokeModular("base",e)}get coinPower(){return InvokeModular("getcoinscale",this.getTargetOrSelf,0)}addCoinPower(e){InvokeModular("scale",e)}getCoinAtIndexPower(e){return InvokeModular("getcoinscale",this.getTargetOrSelf,e)}addClashPower(e){InvokeModular("clash",e)}get power(){return InvokeModular("getcurrentpower",this.getTargetOrSelf)}get rank(){return InvokeModular("getskillrank",this.getTargetOrSelf)}get weight(){return InvokeModular("getskillatkweight",this.getTargetOrSelf)}set weight(e){e|=0;const t=InvokeModular("getskillatkweight",this.getTargetOrSelf);InvokeModular("atkweight",e-t)}get level(){return InvokeModular("getskilllevel",this.getTargetOrSelf)}get correction(){return InvokeModular("getskillatklevel",this.getTargetOrSelf)}get attackType(){return Unit.TYPES.attackTypes.intToName[InvokeModular("getskillatk",this.getTargetOrSelf)]??"none"}set attackType(e){e!=="none"&&InvokeModular("changeatktype",Unit.TYPES.attackTypes.nameToInternal[e])}get sin(){return Unit.TYPES.sin.intToName[InvokeModular("getskillattribute",this.getTargetOrSelf)]??"neutral"}set sin(e){InvokeModular("changeaffinity",Unit.TYPES.sin.nameToInternal[e])}get defenseType(){return Unit.TYPES.defenseType.intToName[InvokeModular("getskilldeftype",this.getTargetOrSelf)]??"none"}get id(){const e=InvokeModular("getskillid");return e!==-1?e:null}get operator(){switch(InvokeModular("getcoinoperator",this.getTargetOrSelf,0)){case 1:return"+";case 2:return"-";case 3:return"*";default:return"?"}}set operator(e){e!=="?"&&InvokeModular("scale",{"+":"ADD","-":"SUB","*":"MUL"}[e])}get clashable(){return!!InvokeModular("getskillcanduel",this.target)}set clashable(e){InvokeModular("skillcanduel",e?"True":"False")}},Shield:class extends UnitPropertyClass{get amount(){return InvokeModular("getshield",this.target)}gainShield(e,t){InvokeModular("shield",this.target,e,t?"perm":void 0)}},Meta:class extends UnitPropertyClass{get unitId(){return InvokeModular("getid",this.target)}get instId(){return InvokeModular("getinstid",this.target)}get characterId(){return InvokeModular("getcharacterid",this.target)}hasKeywordOrAssociation(e,t){return!!InvokeModular("haskey",this.target,t?"OR":"AND",...Array.isArray(e)?e:[e])}},Ability:class extends UnitPropertyClass{add(e,t,n,a){InvokeModular("addability",this.target,e,t,n,a)}remove(e){InvokeModular("removeability",this.target,e)}}};constructor(e){switch(this.target=e,e){case"Self":this.core=new Unit("SelfCore");break;case"MainTarget":case"Target":this.core=new Unit(e+"Core");break;default:this.core=null}this._battleUnitModel=Utility.GetBattleUnitModelFromTarget(this.target)}_battleUnitModel;core;invoke(e,...t){return InvokeModular(e,this.target,...t)}get faction(){return["enemy","ally"][InvokeModular("getunitfaction",this.target)]}get level(){return InvokeModular("getlevel",this.target)}set level(e){e|=0,InvokeModular("setlevel",this.target,e)}get sp(){return InvokeModular("getsp",this.target)}set sp(e){e|=0;const t=InvokeModular("getsp",this.target);InvokeModular("healsp",this.target,e-t)}actionable(){switch(InvokeModular("isactionable",this.target)){case 0:return!1;case 1:return!0;default:return null}}hp=new Unit.GROUPS.Hp(this);speed=new Unit.GROUPS.Speed(this);stagger=new Unit.GROUPS.Stagger(this);buff=new Unit.GROUPS.Buff(this);passive=new Unit.GROUPS.Passive(this);skill=new Unit.GROUPS.Skill(this);shield=new Unit.GROUPS.Shield(this);meta=new Unit.GROUPS.Meta(this);ability=new Unit.GROUPS.Ability(this);resist=new Proxy(this,{get(e,t){const n=Unit.TYPES.attackTypes.nameToInternal[t];if(n)return InvokeModular("getatkres",e.target,n)/100;const a=Unit.TYPES.sin.nameToInternal[t];return a?InvokeModular("getsinres",e.target,a)/100:0},set(e,t,n){const a=Unit.TYPES.attackTypes.nameToInternal[t];if(a)return InvokeModular("ovwatkres",e.target,a,n*100),!0;const o=Unit.TYPES.sin.nameToInternal[t];return o?(InvokeModular("ovwsinres",e.target,o,n*100),!0):!1}})}const Encounter={get turn(){return InvokeModular("getround")},get wave(){return InvokeModular("getwave")},get id(){return InvokeModular("getencounteruid")}},Mathf={clamp(r,e,t){return Math.min(Math.max(r,e),t)},lerp(r,e,t){return r+(e-r)*t},roundToMultiple(r,e){return Math.round(r/e)*e},floorToMultiple(r,e){return Math.floor(r/e)*e},random(r,e){return r===void 0?Math.random():e===void 0?Math.random()*r:Math.random()*(e-r)+r}},__UnitCache__={registry:new Map,encounterId:null,get(r){return this.registry.get(r)??this.registry.set(r,new Unit("inst"+r)).get(r)},resetIfEncounterUpdated(){this.encounterId!==Encounter.id&&(this.registry.clear(),this.encounterId=Encounter.id)}};function GetUnit(r){__UnitCache__.resetIfEncounterUpdated();try{const e=InvokeModular("getinstid",r);return __UnitCache__.get(e)}catch{return null}}function GetUnits(r){__UnitCache__.resetIfEncounterUpdated();try{return[...Utility.GetInstIdFromMultiTarget(r)].map(t=>__UnitCache__.get(t))}catch{return[]}}let ScriptBehaviour;ScriptBehaviour=[]; """;
 
     public ScriptRuntime(dynamic config = null)
     {
@@ -207,6 +207,12 @@ public class ScriptRuntime
     }
 
     public readonly Dictionary<string, LoadedModule> LoadedModules = [];
+    /// <summary>
+    /// key is file path
+    /// 
+    /// value is files that rely on the provided key
+    /// </summary>
+    public readonly Dictionary<string, HashSet<string>> Dependencies = [];
     public void loadFile(string fileDirectory, string modFolder)
     {
         Main.Logger.LogInfo("Loading JS FILE: =>> " + fileDirectory);
@@ -216,13 +222,10 @@ public class ScriptRuntime
 
         Main.Logger.LogInfo($"mod folder is {modFolder}");
 
-
-        // This could cause recursive issues, ill resolve it at a future time.
-        // Copy the collection, and then reload any modules that depend on this file, since they might be importing it.
         // foreach (var (_, module) in LoadedModules.ToArray())
         // {
-        //     // If this module depends on a file that is already in the list, reload it.
-        //     if (module.Dependencies.Contains(fileDirectory) && LoadedModules.Any(kv => kv.Value.FileDirectory == fileDirectory))
+        //     // If the module depends on a file that is already in the list, reload it.
+        //     if (module.Dependencies.Contains(fileDirectory))
         //         module.Reload(this);
         // }
 
@@ -241,14 +244,21 @@ public class ScriptRuntime
         }
 
         string[] lines = File.ReadAllLines(fileDirectory);
-        string COMMENT_PREFIX = "// # Lethe ";
-        var configLine = lines.FirstOrDefault(line => line.TrimStart().StartsWith(COMMENT_PREFIX));
-        if (configLine != null)
+        string contents = string.Join("\n", lines);
+        foreach (var import in getImportsFromJs(contents, fileDirectory))
         {
-            var args = configLine[(configLine.IndexOf(COMMENT_PREFIX) + COMMENT_PREFIX.Length)..]
-                .TrimStart()
-                .Split(' ')
-                .Select(arg => arg.Trim())
+            Dependencies.TryAdd(import, []);
+            Dependencies[import].Add(fileDirectory);
+        }
+
+
+        var test = Regex.Match(contents, @"ScriptBehaviour\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
+        if (test.Success)
+        {
+            var args = test.Groups[1].Value
+                .Split(',')
+                // .Select(arg => Regex.Replace(arg.Trim(), @"""(.*?)""", "$1"))
+                .Select(arg => arg.Trim('"').Trim())
                 .ToHashSet();
 
             if (args.Contains("import-only") || args.Contains("do-not-load"))
@@ -258,6 +268,23 @@ public class ScriptRuntime
             }
         }
 
+        // string COMMENT_PREFIX = "// # Lethe ";
+        // var configLine = lines.FirstOrDefault(line => line.TrimStart().StartsWith(COMMENT_PREFIX));
+        // if (configLine != null)
+        // {
+        //     var args = configLine[(configLine.IndexOf(COMMENT_PREFIX) + COMMENT_PREFIX.Length)..]
+        //         .TrimStart()
+        //         .Split(' ')
+        //         .Select(arg => arg.Trim())
+        //         .ToHashSet();
+
+        //     if (args.Contains("import-only") || args.Contains("do-not-load"))
+        //     {
+        //         Main.Logger.LogInfo($"File {fileDirectory} is to be ignored, skipping execution.");
+        //         return;
+        //     }
+        // }
+
         V8ScriptEngine engine = new(V8ScriptEngineFlags.EnableDynamicModuleImports);
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading;
         engine.DocumentSettings.SearchPath = Path.GetDirectoryName(fileDirectory);
@@ -265,10 +292,11 @@ public class ScriptRuntime
 
         try
         {
-            var mod = new LoadedModule(engine) { FileDirectory = fileDirectory };
-            string contents = string.Join("\n", lines);
-
-            mod.Dependencies = [.. getImportsFromJs(contents, fileDirectory)];
+            var mod = new LoadedModule(engine)
+            {
+                FileDirectory = fileDirectory,
+                Dependencies = [.. getImportsFromJs(contents, fileDirectory)]
+            };
             Main.Logger.LogInfo($"Depends on =>> {string.Join(", ", mod.Dependencies)}");
 
             LoadDataIntoModule(mod);
@@ -443,5 +471,16 @@ public class ScriptRuntime
         };
 
         watchers.Add(dir, watcher);
+    }
+
+    private void FileChanged(string filePath, string modFolder)
+    {
+        loadFile(filePath, modFolder);
+        if (Dependencies.TryGetValue(filePath, out var dependants))
+        {
+            foreach (var dependant in dependants)
+            {
+            }
+        }
     }
 }

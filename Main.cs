@@ -44,6 +44,7 @@ public class Main : BasePlugin
                 "Whether to hot reload .js files when they are changed. If false, you will have to reload the lobby to see changes. If true, changes will be applied when the file is saved."
             ).Value ? reloadBehaviour.onFileSave : reloadBehaviour.onLobby
         };
+        
         runtime.LoadAllFromModPath();
     }
     public static ScriptRuntime runtime;
