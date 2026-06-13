@@ -7,9 +7,21 @@ const cls = fs.readFileSync(path.join(__dirname, "./source.txt"), "utf-8");
 
 const lines = cls.split(os.EOL);
 
+const keywords = {
+    any: new Set(["public", "private", "protected", "internal", "file"]),
+    modifers: new Set(["public", "private", "protected", "internal", "file"]),
+    nonaccess: new Set(["static", "readonly", ""]),
+}
+
 const properties: { key: string, type: string, args?: { spread?: boolean, name: string, type: string; }[]; }[] = [];
 for (let line of lines) {
     line = line.trim();
+    const words = line.split(/\s+/);
+
+    for (const word of words) {
+    
+    }
+
     if (line.startsWith("public")) {
         line = line.split(":")[0];
         if (line.endsWith(")")) {

@@ -120,6 +120,7 @@ function main(): void {
 
     // Step 4: Write JavaScript utility file
     writeJSUtilityFile(jsCode);
+    fs.writeFileSync(path.join(__dirname, "../../embed/script1.js"), jsCode);
 
     // Step 5: Minify JavaScript
     const minifiedCode = minifyJS(jsCode);
@@ -127,7 +128,6 @@ function main(): void {
     // Step 6: Update C# Classes file
     updateCSClassesFile(minifiedCode);
 
-    console.log("");
     console.log("Compilation complete!");
 }
 

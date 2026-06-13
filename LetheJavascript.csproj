@@ -53,6 +53,9 @@
     </Reference>
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="embed/script1.js" />
+  </ItemGroup>
   <!-- Task after build (e.g. copying to game folder, merging, etc.) -->
   <!-- <Target Name="CopyFile" AfterTargets="build">
     <Message Text="Copying BIE files..." Importance="high" />

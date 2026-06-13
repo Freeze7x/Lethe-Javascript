@@ -1,5 +1,7 @@
 ﻿using System;
 using Il2CppSystem.Collections.Generic;
+using Lethe;
+using LetheJavascript.Patches;
 using ModularSkillScripts;
 
 namespace LetheJavascript.Modular;
@@ -36,7 +38,7 @@ public class ModularAcquirerEncounterUid : IModularAcquirer
     }
 }
 
-public static class Utility
+public static class JSPipeline
 {
     public static int[] GetInstIdFromMultiTarget(string targetString)
     {
@@ -49,8 +51,14 @@ public static class Utility
 
         return [.. instIds];
     }
+
     public static BattleUnitModel GetBattleUnitModelFromTarget(string target)
     {
         return ModularConsequenceRunJavascript.lastSA.GetTargetModel(target);
     }
+    public static StageController GetStageController()
+    {
+        return Singleton<StageController>.Instance;
+    }
+    public static int EncounterID => StagePatches.EncounterID;
 }

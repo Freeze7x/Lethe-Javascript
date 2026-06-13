@@ -39,9 +39,11 @@ declare const logger: {
     error(toLog: any): void
 };
 
-declare class Utility {
+declare class JSPipeline {
     static GetInstIdFromMultiTarget(targetString: string): Iterable<number>
-    static GetBattleUnitModelFromTarget(target: string): any
+    static GetBattleUnitModelFromTarget(target: string): BattleUnitModel
+    static GetStageController(): Record<any, any>
+    static EncounterID: number
 }
 
 /** Manually invokes a function from Modular. */

@@ -17,7 +17,6 @@ class UnitPropertyClass {
 }
 /** A class representing a unit in the game. */
 class Unit {
-    target;
     static TYPES = {
         attackTypes: {
             intToName: {
@@ -344,24 +343,32 @@ class Unit {
             }
         },
     };
-    constructor(target) {
-        this.target = target;
-        switch (target) {
-            case "Self":
-                this.core = new Unit("SelfCore");
-                break;
-            case "MainTarget":
-            case "Target":
-                this.core = new Unit(target + "Core");
-                break;
-            default:
-                this.core = null;
-        }
-        this._battleUnitModel = Utility.GetBattleUnitModelFromTarget(this.target);
+    // constructor(public readonly target: string) {
+    //     switch (target) {
+    //         case "Self":
+    //             this.core = new Unit("SelfCore");
+    //             break;
+    //         case "MainTarget":
+    //         case "Target":
+    //             this.core = new Unit(target + "Core");
+    //             break;
+    //         default:
+    //             this.core = null;
+    //     }
+    //     this._battleUnitModel = JSPipeline.GetBattleUnitModelFromTarget(this.target);
+    // }
+    constructor(bum) {
+        this.battleUnitModel = bum;
+        this.instanceId = this.battleUnitModel.InstanceID;
+        this.target = "inst" + this.instanceId;
     }
-    /** Represent the in-game Battle Unit Model. */
-    _battleUnitModel;
-    core;
+    /** A reference to the in-game BattleUnitModel that it represents.
+     *
+     *  Be careful using this, as a lot of things may not work as you think outside of the intended context
+     */
+    battleUnitModel;
+    instanceId;
+    target;
     /** Invokes a modular function, with the first parameter as this unit's target selector.
      * * Do not use this to invoke functions that don't use targets as the first parameter.
      */
@@ -463,14 +470,14 @@ const Mathf = {
     }
 };
 const __UnitCache__ = {
-    registry: new Map(),
+    registry: new WeakMap(),
     encounterId: null,
-    get(key) {
-        return this.registry.get(key) ?? this.registry.set(key, new Unit("inst" + key)).get(key);
+    get(bum) {
+        return this.registry.get(bum) ?? this.registry.set(bum, new Unit(bum)).get(bum);
     },
     resetIfEncounterUpdated() {
         if (this.encounterId !== Encounter.id) {
-            this.registry.clear();
+            this.registry = new WeakMap();
             this.encounterId = Encounter.id;
         }
     }
@@ -488,26 +495,13 @@ const __OldUnits = new Proxy<Record<(string & {}) | MultiTarget, Unit>>({} as an
 
 /** Returns a Unit based on the Modular target selector. */
 function GetUnit(target) {
-    __UnitCache__.resetIfEncounterUpdated();
     try {
         // This will throw if modular gets angry idfk.
-        const id = InvokeModular("getinstid", target);
-        return __UnitCache__.get(id);
+        const bum = JSPipeline.GetBattleUnitModelFromTarget(target);
+        return __UnitCache__.get(bum);
     }
     catch (e) {
         return null;
-    }
-}
-/** Returns an array of Units based on the Modular target selector. */
-function GetUnits(target) {
-    __UnitCache__.resetIfEncounterUpdated();
-    try {
-        // This will throw if modular gets angry idfk.
-        const ids = [...Utility.GetInstIdFromMultiTarget(target)];
-        return ids.map(id => __UnitCache__.get(id));
-    }
-    catch (e) {
-        return [];
     }
 }
 /** Declares the behaviour of this file.

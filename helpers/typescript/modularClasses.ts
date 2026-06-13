@@ -1,4 +1,5 @@
 // # Only Include Below
+type Integer<T extends number> = `${T}` extends `${number}.${number}` ? never : T
 
 abstract class UnitPropertyClass {
     constructor(protected readonly parent: Unit) { }
@@ -109,9 +110,9 @@ class Unit {
                 InvokeModular("healhp", this.target, amount);
             }
 
-            /** Heal this unit by a percentage of its max HP. */
-            healPercent(percent: number) {
-                InvokeModular("healhp", this.target, `${percent}%`);
+            /** Heal this unit by a percentage of its max HP  */
+            healPercent(percentAsFloat: number) {
+                InvokeModular("healhp", this.target, this.max * percentAsFloat);
             }
         },
         Speed: class extends UnitPropertyClass {
@@ -366,24 +367,18 @@ class Unit {
         },
     } as const satisfies Record<string, typeof UnitPropertyClass>;
 
-    constructor(public readonly target: string) {
-        switch (target) {
-            case "Self":
-                this.core = new Unit("SelfCore");
-                break;
-            case "MainTarget":
-            case "Target":
-                this.core = new Unit(target + "Core");
-                break;
-            default:
-                this.core = null;
-        }
-        this._battleUnitModel = Utility.GetBattleUnitModelFromTarget(this.target);
+    constructor(bum: BattleUnitModel) {
+        this.battleUnitModel = bum;
+        this.instanceId = this.battleUnitModel.InstanceID;
+        this.target = "inst" + this.instanceId;
     }
-    /** Represent the in-game Battle Unit Model. */
-    _battleUnitModel: any | null;
-    core: Unit | null;
-
+    /** A reference to the in-game BattleUnitModel that it represents.
+     * 
+     *  Be careful using this, as a lot of things may not work as you think outside of the intended context
+     */
+    readonly battleUnitModel: BattleUnitModel;
+    readonly instanceId;
+    readonly target;
     /** Invokes a modular function, with the first parameter as this unit's target selector.
      * * Do not use this to invoke functions that don't use targets as the first parameter.
      */
@@ -460,8 +455,8 @@ class Unit {
 
 /** A collection of properties related to the current encounter. */
 const Encounter = {
-    get turn() { return InvokeModular("getround",); },
-    get wave() { return InvokeModular("getwave",); },
+    get turn() { return InvokeModular("getround"); },
+    get wave() { return InvokeModular("getwave"); },
     get id() { return InvokeModular("getencounteruid"); }
 };
 
@@ -491,15 +486,17 @@ const Mathf = {
     }
 };
 
+type BattleUnitModel = Record<any, any>;
+
 const __UnitCache__ = {
-    registry: new Map<number, Unit>(),
+    registry: new WeakMap<BattleUnitModel, Unit>(),
     encounterId: null as number | null,
-    get(key: number) {
-        return this.registry.get(key) ?? this.registry.set(key, new Unit("inst" + key)).get(key)!;
+    get(bum: BattleUnitModel) {
+        return this.registry.get(bum) ?? this.registry.set(bum, new Unit(bum)).get(bum)!;
     },
     resetIfEncounterUpdated() {
         if (this.encounterId !== Encounter.id) {
-            this.registry.clear();
+            this.registry = new WeakMap();
             this.encounterId = Encounter.id;
         }
     }
@@ -527,27 +524,26 @@ const __OldUnits = new Proxy<Record<(string & {}) | MultiTarget, Unit>>({} as an
 
 /** Returns a Unit based on the Modular target selector. */
 function GetUnit(target: SingleTarget | (string & {})) {
-    __UnitCache__.resetIfEncounterUpdated();
     try {
         // This will throw if modular gets angry idfk.
-        const id = InvokeModular("getinstid", target);
-        return __UnitCache__.get(id);
+        const bum = JSPipeline.GetBattleUnitModelFromTarget(target);
+        return __UnitCache__.get(bum);
     } catch (e) {
         return null;
     }
 }
 
 /** Returns an array of Units based on the Modular target selector. */
-function GetUnits(target: MultiTarget | (string & {})) {
-    __UnitCache__.resetIfEncounterUpdated();
-    try {
-        // This will throw if modular gets angry idfk.
-        const ids = [...Utility.GetInstIdFromMultiTarget(target)];
-        return ids.map(id => __UnitCache__.get(id));
-    } catch (e) {
-        return [];
-    }
-}
+// function GetUnits(target: MultiTarget | (string & {})) {
+//     __UnitCache__.resetIfEncounterUpdated();
+//     try {
+//         // This will throw if modular gets angry idfk.
+//         const ids = [...JSPipeline.GetInstIdFromMultiTarget(target)];
+//         return ids.map(id => __UnitCache__.get(id));
+//     } catch (e) {
+//         return [];
+//     }
+// }
 type ScriptProperties =
     /** Test */
     "do-not-load" |

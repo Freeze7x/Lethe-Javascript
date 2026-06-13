@@ -77,6 +77,5 @@ public class Main : BasePlugin
     private static void patchModular()
     {
         MainClass.consequenceDict["runjavascript"] = new ModularConsequenceRunJavascript();
-        MainClass.acquirerDict["getencounteruid"] = new ModularAcquirerEncounterUid();
     }
 }
