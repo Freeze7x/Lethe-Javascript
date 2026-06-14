@@ -26,6 +26,7 @@ public class ModularConsequenceRunJavascript : IModularConsequence
     public void ExecuteConsequence(ModularSA modular, string section, string circledSection, string[] circles)
     {
         lastSA = modular;
+        
         Main.runtime.callScript(circles[0], circles[1], Array.ConvertAll(circles[2..], tryParse));
     }
 }
@@ -36,29 +37,4 @@ public class ModularAcquirerEncounterUid : IModularAcquirer
     {
         return Patches.StagePatches.EncounterID;
     }
-}
-
-public static class JSPipeline
-{
-    public static int[] GetInstIdFromMultiTarget(string targetString)
-    {
-        var instIds = new List<int>();
-        var targets = ModularConsequenceRunJavascript.lastSA.GetTargetModelList(targetString);
-        foreach (var target in targets)
-        {
-            instIds.Add(target.InstanceID);
-        }
-
-        return [.. instIds];
-    }
-
-    public static BattleUnitModel GetBattleUnitModelFromTarget(string target)
-    {
-        return ModularConsequenceRunJavascript.lastSA.GetTargetModel(target);
-    }
-    public static StageController GetStageController()
-    {
-        return Singleton<StageController>.Instance;
-    }
-    public static int EncounterID => StagePatches.EncounterID;
 }

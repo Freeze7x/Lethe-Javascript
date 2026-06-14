@@ -33,20 +33,25 @@ declare const EncounterData: Record<any, any>;
 */
 declare const GlobalData: Record<any, any>;
 
+interface DotNetArray<T> extends Iterable<T> {
+    readonly Length: number; // Note the capitalized 'L' from C#
+    [index: number]: T;      // Access elements like standard array
+}
+
 /** A logger for recording messages and errors. */
 declare const logger: {
-    log(toLog: any): void
-    error(toLog: any): void
+    log(toLog: any): void;
+    error(toLog: any): void;
 };
 
 declare class JSPipeline {
-    static GetInstIdFromMultiTarget(targetString: string): Iterable<number>
-    static GetBattleUnitModelFromTarget(target: string): BattleUnitModel
-    static GetStageController(): Record<any, any>
-    static EncounterID: number
+    static GetBattleUnitModelListFromTarget(targetString: string): DotNetArray<BattleUnitModel>;
+    static GetBattleUnitModelFromTarget(target: string): BattleUnitModel;
+    static GetStageController(): Record<any, any>;
+    static EncounterID: number;
 }
 
 /** Manually invokes a function from Modular. */
-declare function InvokeModular<T extends number = number>(name: string, ...args: any[]): T
+declare function InvokeModular<T extends number = number>(name: string, ...args: any[]): T;
 
 //#endregion

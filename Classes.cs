@@ -20,6 +20,7 @@ using LetheJavascript.Patches;
 using BepInEx.Configuration;
 using BepInEx;
 using MainUI;
+using LetheJavascript.JS;
 
 namespace LetheJavascript.Classes;
 
@@ -208,15 +209,7 @@ public class ScriptRuntime
     static readonly string JS_CODE_PREPEND = "";
     static ScriptRuntime()
     {
-        var asm = Assembly.GetExecutingAssembly();
-        using var stream = asm.GetManifestResourceStream(
-            "LetheJavascript/embed/script1.js"
-        )!;
-
-        using var reader = new StreamReader(stream);
-        var js = reader.ReadToEnd();
-
-        JS_CODE_PREPEND = js;
+        JS_CODE_PREPEND = Main.ExtractEmbed("embed.prefix.js");
     }
 
     public readonly Dictionary<string, LoadedModule> LoadedModules = [];
@@ -363,7 +356,7 @@ public class ScriptRuntime
 
         // engine.AddHostObject("IO", new IO(module.ModFolder));
 
-        engine.AddHostType("JSPipeline", typeof(LetheJavascript.Modular.JSPipeline));
+        engine.AddHostType("JSPipeline", typeof(Pipeline));
 
         // Import helper classes. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
         engine.Execute(JS_CODE_PREPEND);
@@ -485,7 +478,7 @@ public class ScriptRuntime
             }
         }
         recursive(filePath);
-        
+
         foreach (var file in filesToLoad)
             LoadFile(file);
     }

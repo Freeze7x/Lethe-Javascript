@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
@@ -26,12 +26,21 @@
       https://nuget.bepinex.dev/v3/index.json;
       https://nuget.samboy.dev/v3/index.json
     </RestoreAdditionalProjectSources>
+    <UserSecretsId>7a6cb875-daec-40ca-a14e-c78ecbdb8a1d</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- <PackageReference Include="ILRepack.Lib.MSBuild.Task" Version="2.0.45">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference> -->
     <PackageReference Include="Microsoft.ClearScript" Version="7.5.1" />
-
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="embed/**/*" />
+  </ItemGroup>
+
   <!-- ~~~~~ ASSEMBLY REFERENCES ~~~~~ -->
   <!-- BepinEx -->
   <ItemGroup>
@@ -53,13 +62,14 @@
     </Reference>
   </ItemGroup>
 
-  <ItemGroup>
-    <EmbeddedResource Include="embed/script1.js" />
-  </ItemGroup>
   <!-- Task after build (e.g. copying to game folder, merging, etc.) -->
-  <!-- <Target Name="CopyFile" AfterTargets="build">
-    <Message Text="Copying BIE files..." Importance="high" />
-    <Copy SourceFiles="$(OutputPath)$(AssemblyName).dll"
-      DestinationFiles="$(LimbusCompanyFolder)\BepInEx\plugins\$(AssemblyName).dll" />
-  </Target> -->
+  <Target Name="CopyFile" AfterTargets="Build">
+    <ItemGroup>
+      <BuiltFiles Include="$(OutputPath)\**\*" />
+    </ItemGroup>
+
+    <Copy
+      SourceFiles="@(BuiltFiles)"
+      DestinationFolder="$(LimbusCompanyFolder)\BepInEx\plugins\ClearScript\%(RecursiveDir)" />
+  </Target>
 </Project>

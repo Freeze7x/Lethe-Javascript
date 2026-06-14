@@ -11,98 +11,35 @@ class UnitPropertyClass {
     }
     ;
     get getTargetOrSelf() {
-        return this.parent.getIsTargetOrSelf();
+        return this.parent.getIsTargetOrSelf;
         // return this.parent.target as "Self";
     }
 }
 /** A class representing a unit in the game. */
 class Unit {
-    static TYPES = {
-        attackTypes: {
-            intToName: {
-                3: "none",
-                0: "slash",
-                1: "pierce",
-                2: "blunt",
-            },
-            nameToInt: {
-                "slash": 0,
-                "pierce": 1,
-                "blunt": 2,
-            },
-            nameToInternal: {
-                "blunt": "HIT",
-                "slash": "SLASH",
-                "pierce": "PENETRATE",
-            }
-        },
-        sin: {
-            intToName: {
-                0: "wrath", 1: "lust", 2: "sloth",
-                3: "gluttony", 4: "gloom", 5: "pride",
-                6: "envy",
-                7: "white", 8: "black",
-                9: "red", 10: "pale",
-                11: "neutral",
-            },
-            nameToInt: {
-                "wrath": 0, "lust": 1, "sloth": 2,
-                "gluttony": 3, "gloom": 4, "pride": 5,
-                "envy": 6,
-                "white": 7, "black": 8,
-                "red": 9, "pale": 10,
-                "neutral": 11
-            },
-            nameToInternal: {
-                "wrath": "CRIMSON", "lust": "SCARLET", "sloth": "AMBER",
-                "gluttony": "SHAMROCK", "gloom": "AZURE", "pride": "INDIGO",
-                "envy": "VIOLET",
-                "white": "WHITE", "black": "BLACK",
-                "red": "RED", "pale": "PALE",
-                "neutral": "NEUTRAL"
-            }
-        },
-        defenseType: {
-            intToName: {
-                0: "none",
-                1: "guard",
-                2: "evade",
-                3: "counter",
-                4: "attack",
-            },
-            nameToInt: {
-                "none": 0,
-                "guard": 1,
-                "evade": 2,
-                "counter": 3,
-                "attack": 4,
-            }
-        }
-    };
+    get isSelf() {
+        return !!this.invoke("issameunit", "Self");
+    }
     /** Returns a string usable by functions that only take "Self" or "Target". */
-    getIsTargetOrSelf() {
-        if (this.invoke("issameunit", "Self"))
+    get getIsTargetOrSelf() {
+        if (this.isSelf)
             return "Self";
-        if (this.invoke("issameunit", "MainTarget"))
-            return "Target";
-        return "";
+        return "Target";
     }
     /** Classes that serve as categories for properties. */
     static GROUPS = {
         Hp: class extends UnitPropertyClass {
             /** The maximum HP this unit can have. */
-            get max() { return InvokeModular("gethp", this.target, "max"); }
+            get max() { return this.parent.battleUnitModel.MaxHp; }
             set max(v) {
-                v |= 0;
-                //@ts-ignore
                 InvokeModular("setmaxhp", this.target, v);
             }
             /** How much HP this unit has. */
-            get current() { return InvokeModular("gethp", this.target, "normal"); }
+            get current() {
+                return this.parent.battleUnitModel.Hp;
+            }
             set current(v) {
-                v |= 0;
-                const cur = InvokeModular("gethp", this.target, "normal");
-                InvokeModular("healhp", this.target, v - cur);
+                InvokeModular("healhp", this.target, (v | 0) - this.current);
             }
             /** The HP% of this unit. */
             get normalized() { return this.current / this.max; }
@@ -110,9 +47,9 @@ class Unit {
             heal(amount) {
                 InvokeModular("healhp", this.target, amount);
             }
-            /** Heal this unit by a percentage of its max HP. */
-            healPercent(percent) {
-                InvokeModular("healhp", this.target, `${percent}%`);
+            /** Heal this unit by a percentage of its max HP  */
+            healPercent(percentAsFloat) {
+                InvokeModular("healhp", this.target, this.max * percentAsFloat);
             }
         },
         Speed: class extends UnitPropertyClass {
@@ -271,18 +208,58 @@ class Unit {
             get correction() { return InvokeModular("getskillatklevel", this.getTargetOrSelf); }
             /** The current skill's attack type. */
             get attackType() {
-                return Unit.TYPES.attackTypes.intToName[InvokeModular("getskillatk", this.getTargetOrSelf)] ?? "none";
+                switch (InvokeModular("getskillatk", this.getTargetOrSelf)) {
+                    case 0: return "slash";
+                    case 1: return "pierce";
+                    case 2: return "blunt";
+                    default: return "none";
+                }
             }
-            set attackType(v) { if (v !== "none")
-                InvokeModular("changeatktype", Unit.TYPES.attackTypes.nameToInternal[v]); }
+            set attackType(v) {
+                if (!this.parent.isSelf)
+                    return;
+                switch (v) {
+                    case "slash": InvokeModular("changeatktype", "SLASH");
+                    case "pierce": InvokeModular("changeatktype", "PENETRATE");
+                    case "blunt": InvokeModular("changeatktype", "HIT");
+                }
+            }
             /** The current skill's sin affinity. */
             get sin() {
-                return Unit.TYPES.sin.intToName[InvokeModular("getskillattribute", this.getTargetOrSelf)] ?? "neutral";
+                switch (InvokeModular("getskillattribute", this.getTargetOrSelf)) {
+                    case 0: return "wrath";
+                    case 1: return "lust";
+                    case 2: return "sloth";
+                    case 3: return "gluttony";
+                    case 4: return "gloom";
+                    case 5: return "pride";
+                    case 6: return "envy";
+                    default: return "none";
+                }
             }
-            set sin(v) { InvokeModular("changeaffinity", Unit.TYPES.sin.nameToInternal[v]); }
+            set sin(v) {
+                if (!this.parent.isSelf)
+                    return;
+                switch (v) {
+                    case "wrath": InvokeModular("changeaffinity", "CRIMSON");
+                    case "lust": InvokeModular("changeaffinity", "SCARLET");
+                    case "sloth": InvokeModular("changeaffinity", "AMBER");
+                    case "gluttony": InvokeModular("changeaffinity", "SHAMROCK");
+                    case "gloom": InvokeModular("changeaffinity", "AZURE");
+                    case "pride": InvokeModular("changeaffinity", "INDIGO");
+                    case "envy": InvokeModular("changeaffinity", "VIOLET");
+                    default: InvokeModular("changeaffinity", "NEUTRAL");
+                }
+            }
             /** The current skill's defense type, if any. */
             get defenseType() {
-                return Unit.TYPES.defenseType.intToName[InvokeModular("getskilldeftype", this.getTargetOrSelf)] ?? "none";
+                switch (InvokeModular("getskilldeftype", this.getTargetOrSelf)) {
+                    case 1: return "guard";
+                    case 2: return "evade";
+                    case 3: return "counter";
+                    case 4: return "attack";
+                    default: return "none";
+                }
             }
             /** Get the skill's ID. */
             get id() {
@@ -317,6 +294,7 @@ class Unit {
             gainShield(amount, persist) {
                 InvokeModular("shield", this.target, amount, persist ? "perm" : undefined);
             }
+            ;
         },
         Meta: class extends UnitPropertyClass {
             /** This unit's UID. */
@@ -342,21 +320,32 @@ class Unit {
                 InvokeModular("removeability", this.target, systemAbility);
             }
         },
+        Damage: class extends UnitPropertyClass {
+            bonus(amount, args) {
+                let sin = -1;
+                let type = -1;
+                if (args) {
+                    if (args.sin)
+                        switch (args.sin) {
+                            case "wrath": sin = 0;
+                            case "lust": sin = 1;
+                            case "sloth": sin = 2;
+                            case "gluttony": sin = 3;
+                            case "gloom": sin = 4;
+                            case "pride": sin = 5;
+                            case "envy": sin = 6;
+                        }
+                    if (args.type)
+                        switch (args.type) {
+                            case "slash": type = 0;
+                            case "pierce": type = 1;
+                            case "blunt": type = 2;
+                        }
+                }
+                this.parent.invoke("bonusdmg", amount, type, sin);
+            }
+        },
     };
-    // constructor(public readonly target: string) {
-    //     switch (target) {
-    //         case "Self":
-    //             this.core = new Unit("SelfCore");
-    //             break;
-    //         case "MainTarget":
-    //         case "Target":
-    //             this.core = new Unit(target + "Core");
-    //             break;
-    //         default:
-    //             this.core = null;
-    //     }
-    //     this._battleUnitModel = JSPipeline.GetBattleUnitModelFromTarget(this.target);
-    // }
     constructor(bum) {
         this.battleUnitModel = bum;
         this.instanceId = this.battleUnitModel.InstanceID;
@@ -412,25 +401,51 @@ class Unit {
     ability = new Unit.GROUPS.Ability(this);
     resist = new Proxy(this, {
         get(self, p) {
-            const atkType = Unit.TYPES.attackTypes.nameToInternal[p];
-            if (atkType)
-                return InvokeModular("getatkres", self.target, atkType) / 100;
-            const sin = Unit.TYPES.sin.nameToInternal[p];
-            if (sin)
-                //@ts-ignore
-                return InvokeModular("getsinres", self.target, sin) / 100;
-            return 0;
+            switch (p) {
+                case "slash": return self.invoke("getatkres", "SLASH") / 100;
+                case "pierce": return self.invoke("getatkres", "PENETRATE") / 100;
+                case "blunt": return self.invoke("getatkres", "HIT") / 100;
+                case "wrath": return self.invoke("getsinres", "CRIMSON") / 100;
+                case "lust": return self.invoke("getsinres", "SCARLET") / 100;
+                case "sloth": return self.invoke("getsinres", "AMBER") / 100;
+                case "gluttony": return self.invoke("getsinres", "SHAMROCK") / 100;
+                case "gloom": return self.invoke("getsinres", "AZURE") / 100;
+                case "pride": return self.invoke("getsinres", "INDIGO") / 100;
+                case "envy": return self.invoke("getsinres", "VIOLET") / 100;
+            }
         },
         set(self, p, value) {
-            const atkType = Unit.TYPES.attackTypes.nameToInternal[p];
-            if (atkType) {
-                InvokeModular("ovwatkres", self.target, atkType, value * 100);
-                return true;
-            }
-            const sin = Unit.TYPES.sin.nameToInternal[p];
-            if (sin) {
-                InvokeModular("ovwsinres", self.target, sin, value * 100);
-                return true;
+            switch (p) {
+                case "slash":
+                    self.invoke("ovwatkres", "SLASH", (value * 100) | 0);
+                    return true;
+                case "pierce":
+                    self.invoke("ovwatkres", "PENETRATE", (value * 100) | 0);
+                    return true;
+                case "blunt":
+                    self.invoke("ovwatkres", "HIT", (value * 100) | 0);
+                    return true;
+                case "wrath":
+                    self.invoke("ovwsinres", "CRIMSON", (value * 100) | 0);
+                    return true;
+                case "lust":
+                    self.invoke("ovwsinres", "SCARLET", (value * 100) | 0);
+                    return true;
+                case "sloth":
+                    self.invoke("ovwsinres", "AMBER", (value * 100) | 0);
+                    return true;
+                case "gluttony":
+                    self.invoke("ovwsinres", "SHAMROCK", (value * 100) | 0);
+                    return true;
+                case "gloom":
+                    self.invoke("ovwsinres", "AZURE", (value * 100) | 0);
+                    return true;
+                case "pride":
+                    self.invoke("ovwsinres", "INDIGO", (value * 100) | 0);
+                    return true;
+                case "envy":
+                    self.invoke("ovwsinres", "VIOLET", (value * 100) | 0);
+                    return true;
             }
             return false;
         }
