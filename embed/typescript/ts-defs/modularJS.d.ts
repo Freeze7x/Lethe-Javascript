@@ -53,7 +53,8 @@ class Unit {
                 return this.parent.battleUnitModel.Hp;
             }
             set current(v) {
-                InvokeModular("healhp", this.target, (v | 0) - this.current);
+                // InvokeModular("healhp", this.target, (v | 0) - this.current);
+                JSPipeline.BattleUnitModelUtility.ChangeHp(this.parent.battleUnitModel, v | 0);
             }
 
             /** The HP% of this unit. */
@@ -435,6 +436,7 @@ class Unit {
     shield = new Unit.GROUPS.Shield(this);
     meta = new Unit.GROUPS.Meta(this);
     ability = new Unit.GROUPS.Ability(this);
+    damage = new Unit.GROUPS.Damage(this);
     resist = new Proxy(this, {
         get(self, p: Unit.AttackType | Unit.Sin) {
             switch (p) {
@@ -565,7 +567,10 @@ function GetUnit(target: SingleTarget | (string & {})) {
 type ScriptProperties = "do-not-load" | "import-only";
 /** Declares the behaviour of this file.
 * 
-* Ensure that the array contains explict strings, and not variable/property references.
+* Ensure that this array:
+* * Contains explict strings.
+* * Does not contain variable/property references.
+* * Is not commented out (It will still be picked up).
 * 
 * The top-most instance of redeclaration in the file will be read.
 * * `do-not-load`/`import-only` prevents the file from being loaded at all.

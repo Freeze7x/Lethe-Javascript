@@ -816,7 +816,6 @@ type ConsequenceFunctions = {
 	@param var_1 See [Multi-Target](https://rentry.co/glitchscript#target-arguments)
 	@param var_2 Slot Index | (Starts from 1)
 	*/
-	skillslotremove(var_1: MultiTarget, var_2: number): void
 
 	/**
 	Summons an Assistant Next turn after activation (Don't use with RoundStart timing as it breaks the game, you can use EndBattle to Achieve the same effect)

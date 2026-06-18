@@ -228,13 +228,6 @@ public class ScriptRuntime
 
         Main.Logger.LogInfo($"mod folder is {modFolder}");
 
-        // foreach (var (_, module) in LoadedModules.ToArray())
-        // {
-        //     // If the module depends on a file that is already in the list, reload it.
-        //     if (module.Dependencies.Contains(fileDirectory))
-        //         module.Reload(this);
-        // }
-
         // Dispose old module if it exists
         if (LoadedModules.TryGetValue(currentScriptName, out var existing))
         {
@@ -273,23 +266,6 @@ public class ScriptRuntime
                 return;
             }
         }
-
-        // string COMMENT_PREFIX = "// # Lethe ";
-        // var configLine = lines.FirstOrDefault(line => line.TrimStart().StartsWith(COMMENT_PREFIX));
-        // if (configLine != null)
-        // {
-        //     var args = configLine[(configLine.IndexOf(COMMENT_PREFIX) + COMMENT_PREFIX.Length)..]
-        //         .TrimStart()
-        //         .Split(' ')
-        //         .Select(arg => arg.Trim())
-        //         .ToHashSet();
-
-        //     if (args.Contains("import-only") || args.Contains("do-not-load"))
-        //     {
-        //         Main.Logger.LogInfo($"File {fileDirectory} is to be ignored, skipping execution.");
-        //         return;
-        //     }
-        // }
 
         V8ScriptEngine engine = new(V8ScriptEngineFlags.EnableDynamicModuleImports);
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading;
@@ -351,8 +327,8 @@ public class ScriptRuntime
         });
 
         // Import global game data and IO access.
-        engine.AddHostObject("EncounterData", StagePatches.encounterData);
-        engine.AddHostObject("GlobalData", StagePatches.globalData);
+        engine.AddHostObject("EncounterData", StagePatches.EncounterData);
+        engine.AddHostObject("GlobalData", StagePatches.GlobalData);
 
         // engine.AddHostObject("IO", new IO(module.ModFolder));
 
@@ -368,10 +344,10 @@ public class ScriptRuntime
     }
     public void callScript(string scriptName, string method, object[] args)
     {
-        Main.Logger.LogInfo($"Looking for {scriptName}.js, calling {method} in it.");
+        // Main.Logger.LogInfo($"Looking for {scriptName}.js, calling {method} in it.");
         if (!LoadedModules.TryGetValue(scriptName, out var module)) return;
 
-        Main.Logger.LogInfo($"Found {scriptName}.js. trying to call {method} now.");
+        // Main.Logger.LogInfo($"Found {scriptName}.js. trying to call {method} now.");
 
         try
         {

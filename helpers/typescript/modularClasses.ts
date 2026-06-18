@@ -51,7 +51,8 @@ class Unit {
                 return this.parent.battleUnitModel.Hp;
             }
             set current(v) {
-                InvokeModular("healhp", this.target, (v | 0) - this.current);
+                // InvokeModular("healhp", this.target, (v | 0) - this.current);
+                JSPipeline.BattleUnitModelUtility.ChangeHp(this.parent.battleUnitModel, v | 0);
             }
 
             /** The HP% of this unit. */
@@ -433,6 +434,7 @@ class Unit {
     shield = new Unit.GROUPS.Shield(this);
     meta = new Unit.GROUPS.Meta(this);
     ability = new Unit.GROUPS.Ability(this);
+    damage = new Unit.GROUPS.Damage(this);
     resist = new Proxy(this, {
         get(self, p: Unit.AttackType | Unit.Sin) {
             switch (p) {
@@ -501,8 +503,6 @@ const Mathf = {
     }
 };
 
-type BattleUnitModel = Record<any, any>;
-
 const __UnitCache__ = {
     registry: new WeakMap<BattleUnitModel, Unit>(),
     encounterId: null as number | null,
@@ -524,18 +524,6 @@ type SingleTarget =
     "adjLeft" | "adjRight";
 type MultiTarget = SingleTarget |
     "EveryTarget" | "SubTarget" | "All";
-
-
-/*
-const __OldUnits = new Proxy<Record<(string & {}) | MultiTarget, Unit>>({} as any, {
-    get(target, targetSelector) {
-        if (typeof targetSelector !== "string")
-            throw new Error("Symbol keys are not usable here.");
-
-        const unit = target[targetSelector] ??= new Unit(targetSelector);
-        return unit;
-    },
-});
 
 /** Returns a Unit based on the Modular target selector. */
 function GetUnit(target: SingleTarget | (string & {})) {
@@ -563,7 +551,10 @@ function GetUnit(target: SingleTarget | (string & {})) {
 type ScriptProperties = "do-not-load" | "import-only";
 /** Declares the behaviour of this file.
 * 
-* Ensure that the array contains explict strings, and not variable/property references.
+* Ensure that this array:
+* * Contains explict strings.
+* * Does not contain variable/property references.
+* * Is not commented out (It will still be picked up).
 * 
 * The top-most instance of redeclaration in the file will be read.
 * * `do-not-load`/`import-only` prevents the file from being loaded at all.

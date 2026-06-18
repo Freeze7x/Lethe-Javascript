@@ -24,14 +24,18 @@
  * It is recommended that you apply a property directly to it under your mod's name
  * or a similar identifier, and write inside of that property to avoid collisions.
 */
-declare const EncounterData: Record<any, any>;
+declare const EncounterData: {
+    get<T = {}>(key: string, defaultValue?: T): T;
+};
 
 /**
  * Writable Record that persists throughout the Limbus Company session. 
  * It is recommended that you apply a property directly to it under your mod's name
  * or a similar identifier, and write inside of that property to avoid collisions.
 */
-declare const GlobalData: Record<any, any>;
+declare const GlobalData: {
+    get<T = {}>(key: string, defaultValue?: T): T;
+};
 
 interface DotNetArray<T> extends Iterable<T> {
     readonly Length: number; // Note the capitalized 'L' from C#
@@ -48,7 +52,11 @@ declare class JSPipeline {
     static GetBattleUnitModelListFromTarget(targetString: string): DotNetArray<BattleUnitModel>;
     static GetBattleUnitModelFromTarget(target: string): BattleUnitModel;
     static GetStageController(): Record<any, any>;
+    static SelfAction(): Record<any, any>;
     static EncounterID: number;
+    static BattleUnitModelUtility: {
+        ChangeHp(bum: BattleUnitModel, number: number): void;
+    };
 }
 
 /** Manually invokes a function from Modular. */
