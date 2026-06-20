@@ -109,6 +109,7 @@ public class Main : BasePlugin
     {
         string jsDef = ExtractEmbed("embed.typescript.ts_defs.modularJS.d.ts");
         string csDef = ExtractEmbed("embed.typescript.ts_defs.modularCS.d.ts");
+        string tsConfig = ExtractEmbed("embed.typescript.tsconfig.json");
         foreach (string modPath in Directory.GetDirectories(LetheMain.modsPath.FullPath))
         {
             string typescriptFolder = Path.Combine(modPath, "typescript");
@@ -121,6 +122,7 @@ public class Main : BasePlugin
 
             File.WriteAllText(Path.Combine(typescriptDefFolder, "modularJS.d.ts"), jsDef);
             File.WriteAllText(Path.Combine(typescriptDefFolder, "modularCS.d.ts"), csDef);
+            File.WriteAllText(Path.Combine(typescriptFolder, "tsconfig.json"), csDef);
         }
     }
     private static void patchModular()

@@ -1,4 +1,4 @@
-﻿using System;
+﻿using Il2CppSystem;
 using Il2CppSystem.Collections.Generic;
 using Lethe;
 using LetheJavascript.Modular;
@@ -15,44 +15,31 @@ public static class V8JSUtilities
     static V8JSUtilities()
     {
         engine = new();
-        engine.Execute(@"
-            function returnNewObject() {
-                return {};
-            }
+        engine.Execute(
+            Main.ExtractEmbed("embed.javascript.dotNetUtility.js")
+        );
+    }
 
-            function turnIterableIntoArray(itr) {
-                return [...itr]
-            }
-        ");
-    }
-    public static ScriptObject GetEmptyObject()
-    {
-        return (ScriptObject)engine.Invoke("returnNewObject");
-    }
+    public static ScriptObject GetEmptyObject() => (ScriptObject)engine.Invoke("returnNewObject");
     public static ScriptObject TurnIterableIntoJSArray(IEnumerable<object> iterable)
-    {
-        return (ScriptObject)engine.Invoke("turnIterableIntoArray", iterable);
-    }
+        => (ScriptObject)engine.Invoke("turnIterableIntoArray", iterable);
+    public static ScriptObject ConstructGameData()
+        => (ScriptObject)engine.Invoke("constructGameData");
 }
 
 
-public class ModData
-{
-    public ModData(Action<Action> clear)
-    {
-        clear(() => Data.Clear());
-    }
-    public ModData() { }
-    private static readonly Dictionary<string, ScriptObject> Data = new();
-    public static ScriptObject get(string modkey, ScriptObject defaultValue = null)
-    {
-        if (Data.TryGetValue(modkey, out var data))
-            return data;
+// public class ModData
+// {
+//     private readonly Dictionary<string, ScriptObject> Data = new();
+//     public ScriptObject get(string modkey, ScriptObject defaultValue = null)
+//     {
+//         if (Data.TryGetValue(modkey, out var data))
+//             return data;
 
-        Data.Add(modkey, defaultValue ?? V8JSUtilities.GetEmptyObject());
-        return Data[modkey];
-    }
-}
+//         Data.Add(modkey, defaultValue ?? V8JSUtilities.GetEmptyObject());
+//         return Data[modkey];
+//     }
+// }
 
 public static class Pipeline
 {

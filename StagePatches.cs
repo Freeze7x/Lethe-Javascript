@@ -1,31 +1,39 @@
-﻿using System.IO;
-using HarmonyLib;
-using MainUI;
-using Lethe;
-using System.Collections.Generic;
-
+﻿using HarmonyLib;
+using Il2CppSystem;
+using Il2CppSystem.Collections.Generic;
 using Microsoft.ClearScript;
-using System;
 
 namespace LetheJavascript.Patches;
 
+
 public class StagePatches
 {
-    public static readonly JS.ModData EncounterData;
-    public static readonly JS.ModData GlobalData = new();
-    private static Action EncounterDataClearer = () => { };
+    // public static readonly JS.ModData EncounterData;
+    public static class GameData
+    {
+        public static readonly Dictionary<string, dynamic> _RegistryGlobal = new();
+        public static readonly Dictionary<string, dynamic> _RegistryEncounter = new();
+        public static dynamic Get(string type, string key)
+        {
+            return type switch
+            {
+                "global" => _RegistryGlobal[key],
+                "encounter" => _RegistryEncounter[key],
+                _ => null,
+            };
+        }
+    }
     static StagePatches()
     {
-        EncounterData = new((clearer) => EncounterDataClearer = clearer);
+        // EncounterData = new((clearer) => EncounterDataClearer = clearer);
     }
     public static int EncounterID = -1;
     [HarmonyPatch(typeof(StageModel), nameof(StageModel.Init))]
     [HarmonyPrefix]
     private static void Prefix_StageModel_Init(StageStaticData stageinfo, StageModel __instance)
     {
-        EncounterDataClearer();
-
         // Increment the encounter ID.
         EncounterID++;
+        GameData._RegistryGlobal.Clear();
     }
 }

@@ -266,7 +266,6 @@ public class ScriptRuntime
                 return;
             }
         }
-
         V8ScriptEngine engine = new(V8ScriptEngineFlags.EnableDynamicModuleImports);
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading;
         engine.DocumentSettings.SearchPath = Path.GetDirectoryName(fileDirectory);
@@ -327,8 +326,8 @@ public class ScriptRuntime
         });
 
         // Import global game data and IO access.
-        engine.AddHostObject("EncounterData", StagePatches.EncounterData);
-        engine.AddHostObject("GlobalData", StagePatches.GlobalData);
+        // engine.AddHostObject("EncounterData", StagePatches.EncounterData);
+        // engine.AddHostObject("GlobalData", StagePatches.GlobalData);
 
         // engine.AddHostObject("IO", new IO(module.ModFolder));
 
@@ -338,7 +337,7 @@ public class ScriptRuntime
         engine.Execute(JS_CODE_PREPEND);
     }
     public void loadLetheJavascriptFolder(string folderDirectory)
-    {
+    {   
         foreach (var file in Directory.GetFiles(folderDirectory, "*.js", SearchOption.AllDirectories))
             LoadFile(file, folderDirectory);
     }

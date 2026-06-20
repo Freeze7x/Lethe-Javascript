@@ -26,7 +26,6 @@ public class ModularConsequenceRunJavascript : IModularConsequence
     public void ExecuteConsequence(ModularSA modular, string section, string circledSection, string[] circles)
     {
         lastSA = modular;
-        
         Main.runtime.callScript(circles[0], circles[1], Array.ConvertAll(circles[2..], tryParse));
     }
 }

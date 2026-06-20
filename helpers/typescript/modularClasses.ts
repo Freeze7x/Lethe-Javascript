@@ -11,6 +11,9 @@ type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumer
 
 abstract class UnitPropertyClass {
     constructor(protected readonly parent: Unit) { }
+    protected invoke(funcName: string, ...args: any[]) {
+        this.parent.invoke(funcName, ...args);
+    }
     protected get target() {
         return this.parent.target;
     };
@@ -34,8 +37,36 @@ class Unit {
     /** Returns a string usable by functions that only take "Self" or "Target". */
     get getIsTargetOrSelf() {
         if (this.isSelf) return "Self";
-
         return "Target";
+    }
+
+
+    private static unitCache = {
+        registry: new WeakMap<BattleUnitModel, Unit>(),
+        encounterId: null as number | null,
+        get(bum: BattleUnitModel) {
+            return this.registry.get(bum) ?? this.registry.set(bum, new Unit(bum)).get(bum)!;
+        },
+        resetIfEncounterUpdated() {
+            if (this.encounterId !== Encounter.id) {
+                this.registry = new WeakMap();
+                this.encounterId = Encounter.id;
+            }
+        }
+    };
+
+    /** Returns a Unit based on the Modular target selector. */
+    static get(target: SingleTarget) {
+        return this.getAny(target);
+    }
+    static getAny(target: SingleTarget | (string & {})) {
+        try {
+            // This will throw if modular gets angry idfk.
+            const bum = JSPipeline.GetBattleUnitModelFromTarget(target);
+            return this.unitCache.get(bum);
+        } catch (e) {
+            return null;
+        }
     }
 
     /** Classes that serve as categories for properties. */
@@ -85,7 +116,23 @@ class Unit {
             /**
              * Add a stagger bar at a specific HP threshold.
              */
-            addAt(hp: number) { InvokeModular("breakaddbar", this.target, hp); }
+            addBarAt(hp: number) { this.invoke("breakaddbar", hp); }
+            /**
+             * 
+             * @param barIndex The index to remove. If negative, counts from the end instead
+             * Removes a stagger threshold at an index in descending order.
+             */
+            removeBar(barIndex: number | "all") {
+                if (barIndex === "all") {
+                    this.invoke("deactivebreak", true, -1);
+                    return;
+                }
+                barIndex |= 0;
+                if (barIndex >= 0)
+                    this.invoke("deactivebreak", true, barIndex);
+                else
+                    this.invoke("deactivebreak", true, -1 - barIndex, true);
+            }
             /**
              * Trigger tremor burst on this unit.
              * @param times - Number of times to trigger. (defaults to once)
@@ -98,7 +145,7 @@ class Unit {
                 }
             }
             /**
-             * Raise this unit's stagger threshold by the provided amount.
+             * Raise or lower this unit's stagger threshold by the provided amount.
              * @param amount - The amount of stagger damage.
              * @param times - Number of times to trigger.
              */
@@ -146,10 +193,10 @@ class Unit {
              * @param activeRound - When the buff should become active.
              */
             add(keyword: string, potency: number, count: number, activeRound?: "this turn" | "next turn" | "this and next turn", use?: boolean) {
-                const turnToAcivate = activeRound == undefined ? 0 : { "this turn": 0, "next turn": 1, "this and next turn": 2 }[activeRound];
+                const turnToActivate = activeRound == undefined ? 0 : { "this turn": 0, "next turn": 1, "this and next turn": 2 }[activeRound];
                 InvokeModular("buff", this.target, keyword,
                     potency, count,
-                    turnToAcivate,
+                    turnToActivate,
                     use ? "use" : undefined
                 );
             }
@@ -172,6 +219,10 @@ class Unit {
                 return type ?
                     InvokeModular("getbuffcount", this.target, type) :
                     InvokeModular("getbuffcount", this.target, "neg") + InvokeModular("getbuffcount", this.target, "pos");
+            }
+            AmplitudeConversion(buff: string, superPosition?: boolean) {
+                if (superPosition) this.invoke("vibrationswitch", buff, true);
+                else this.invoke("vibrationswitch", buff);
             }
         },
         Passive: class extends UnitPropertyClass {
@@ -202,17 +253,28 @@ class Unit {
             /** The current skill's base power. */
             get basePower() { return InvokeModular("getskillbase", this.getTargetOrSelf); }
             /** Add to the skill's base power. */
-            addBasePower(v: number) { InvokeModular("base", v); }
+            addBasePower(v: number) {
+                if (!this.parent.isSelf) return;
+                InvokeModular("base", v);
+            }
 
             /** The current skill's coin power. */
             get coinPower() { return InvokeModular("getcoinscale", this.getTargetOrSelf, 0); }
             /** Add to the current skill's coin power. */
-            addCoinPower(v: number) { InvokeModular("scale", v); }
+            addCoinPower(v: number) {
+                if (!this.parent.isSelf) return;
+                InvokeModular("scale", v);
+            }
             /** The current skill's coin power at a specific index. */
-            getCoinAtIndexPower(index: number) { return InvokeModular("getcoinscale", this.getTargetOrSelf, index); }
+            getCoinAtIndexPower(index: number) {
+                return InvokeModular("getcoinscale", this.getTargetOrSelf, index);
+            }
 
             /** Add to the current skill's clash power. */
-            addClashPower(v: number) { InvokeModular("clash", v); }
+            addClashPower(v: number) {
+                if (!this.parent.isSelf) return;
+                InvokeModular("clash", v);
+            }
 
             /** Get the current skill's power. */
             get power() { return InvokeModular("getcurrentpower", this.getTargetOrSelf); }
@@ -246,9 +308,9 @@ class Unit {
                 if (!this.parent.isSelf) return;
 
                 switch (v) {
-                    case "slash": InvokeModular("changeatktype", "SLASH");
-                    case "pierce": InvokeModular("changeatktype", "PENETRATE");
-                    case "blunt": InvokeModular("changeatktype", "HIT");
+                    case "slash": InvokeModular("changeatktype", "SLASH"); break;
+                    case "pierce": InvokeModular("changeatktype", "PENETRATE"); break;
+                    case "blunt": InvokeModular("changeatktype", "HIT"); break;
                 }
             }
 
@@ -268,13 +330,13 @@ class Unit {
             set sin(v) {
                 if (!this.parent.isSelf) return;
                 switch (v) {
-                    case "wrath": InvokeModular("changeaffinity", "CRIMSON");
-                    case "lust": InvokeModular("changeaffinity", "SCARLET");
-                    case "sloth": InvokeModular("changeaffinity", "AMBER");
-                    case "gluttony": InvokeModular("changeaffinity", "SHAMROCK");
-                    case "gloom": InvokeModular("changeaffinity", "AZURE");
-                    case "pride": InvokeModular("changeaffinity", "INDIGO");
-                    case "envy": InvokeModular("changeaffinity", "VIOLET");
+                    case "wrath": InvokeModular("changeaffinity", "CRIMSON"); break;
+                    case "lust": InvokeModular("changeaffinity", "SCARLET"); break;
+                    case "sloth": InvokeModular("changeaffinity", "AMBER"); break;
+                    case "gluttony": InvokeModular("changeaffinity", "SHAMROCK"); break;
+                    case "gloom": InvokeModular("changeaffinity", "AZURE"); break;
+                    case "pride": InvokeModular("changeaffinity", "INDIGO"); break;
+                    case "envy": InvokeModular("changeaffinity", "VIOLET"); break;
                     default: InvokeModular("changeaffinity", "NEUTRAL");
                 }
             }
@@ -292,7 +354,7 @@ class Unit {
 
             /** Get the skill's ID. */
             get id() {
-                const id = InvokeModular("getskillid",) as number;
+                const id = InvokeModular("getskillid");
                 return id !== -1 ? id : null;
             }
 
@@ -305,8 +367,34 @@ class Unit {
                 }
             }
             set operator(v) {
+                if (!this.parent.isSelf) return;
                 if (v === "?") return;
                 InvokeModular("scale", { "+": "ADD", "-": "SUB", "*": "MUL" }[v]);
+            }
+            /** https://rentry.co/glitchscript#assistdefensevar_1var_2var_3 */
+            assistDefend(target: Unit, skillId: number) {
+                this.invoke("assistdefense", target.target, skillId);
+            }
+
+            gainSlot(amount: number) {
+                for (let i = 0; i < amount; i++)
+                    this.invoke("skillslotgive");
+            }
+            /**
+             * @param index 0-based
+             */
+            removeSlot(index: number) {
+                this.invoke("skillslotremove", index + 1);
+            }
+
+            discard(tier: "highest" | "lowest" | "random", amount = 1) {
+                if (!this.parent.isSelf) return;
+                const lu = {
+                    highest: "DESCENDING",
+                    lowest: "ASCENDING",
+                    random: "RANDOM"
+                };
+                InvokeModular("discard", lu[tier], amount);
             }
 
             /** Whether the current skill is clashable. */
@@ -356,28 +444,34 @@ class Unit {
             bonus(amount: number, args?: { sin?: Unit.Sin, type?: Unit.AttackType; }) {
                 let sin = -1;
                 let type = -1;
-                if (args) {
-                    if (args.sin) switch (args.sin) {
-                        case "wrath": sin = 0;
-                        case "lust": sin = 1;
-                        case "sloth": sin = 2;
-                        case "gluttony": sin = 3;
-                        case "gloom": sin = 4;
-                        case "pride": sin = 5;
-                        case "envy": sin = 6;
-                    }
-                    if (args.type) switch (args.type) {
-                        case "slash": type = 0;
-                        case "pierce": type = 1;
-                        case "blunt": type = 2;
-                    }
-                }
-                this.parent.invoke("bonusdmg", amount, type, sin);
+
+                const sinMap = {
+                    wrath: 0,
+                    lust: 1,
+                    sloth: 2,
+                    gluttony: 3,
+                    gloom: 4,
+                    pride: 5,
+                    envy: 6
+                } as const;
+                const typeMap = {
+                    slash: 0,
+                    pierce: 1,
+                    blunt: 2
+                } as const
+
+                if (args?.sin) sin = sinMap[args.sin];
+                if (args?.type) type = typeMap[args.type];
+
+                this.invoke("bonusdmg", amount, type, sin);
+            }
+            sinkingDeluge(amount: number) {
+                this.invoke("deluge", amount);
             }
         },
     } as const satisfies Record<string, typeof UnitPropertyClass>;
 
-    constructor(bum: BattleUnitModel) {
+    private constructor(bum: BattleUnitModel) {
         this.battleUnitModel = bum;
         this.instanceId = this.battleUnitModel.InstanceID;
         this.target = "inst" + this.instanceId;
@@ -474,8 +568,36 @@ class Unit {
 const Encounter = {
     get turn() { return InvokeModular("getround"); },
     get wave() { return InvokeModular("getwave"); },
-    get id() { return InvokeModular("getencounteruid"); }
+    get id() { return InvokeModular("getencounteruid"); },
+    get encounterType() { return InvokeModular("isfocused") ? "focused" : "unfocused"; },
+    getSinsInDashboard(sin: Unit.Sin | "highest" | "lowest", layer: "bottom" | "top" | "upcoming" | "bottom-and-top" | "bottom-top-and-upcoming") {
+        const sinMap = {
+            wrath: "CRIMSON",
+            lust: "SCARLET",
+            sloth: "AMBER",
+            gluttony: "SHAMROCK",
+            gloom: "AZURE",
+            pride: "INDIGO",
+            envy: "VIOLET",
+            highest: "HIGHEST",
+            lowest: "LOWEST"
+        } as const;
+
+        const layerMap = {
+            "bottom": ["BOTTOM", 0],
+            "top": ["TOP", 0],
+            "upcoming": ["NEITHER", 1],
+            "bottom-and-top": ["BOTH", 0],
+            "bottom-top-and-upcoming": ["BOTH", 1]
+        } as const;
+
+        const sinMapped = sinMap[sin] || "HIGHEST";
+        const [layerType, upcomingFlag] = layerMap[layer] || ["BOTH", 0];
+
+        return InvokeModular("getsinsindashboard", sinMapped, layerType, upcomingFlag);
+    }
 };
+
 
 /** A collection of mathematical functions not available in the standard Math object. */
 const Mathf = {
@@ -503,20 +625,6 @@ const Mathf = {
     }
 };
 
-const __UnitCache__ = {
-    registry: new WeakMap<BattleUnitModel, Unit>(),
-    encounterId: null as number | null,
-    get(bum: BattleUnitModel) {
-        return this.registry.get(bum) ?? this.registry.set(bum, new Unit(bum)).get(bum)!;
-    },
-    resetIfEncounterUpdated() {
-        if (this.encounterId !== Encounter.id) {
-            this.registry = new WeakMap();
-            this.encounterId = Encounter.id;
-        }
-    }
-};
-
 type SingleTarget =
     "Self" | "MainTarget" |
     "Victim" | "Killer" |
@@ -525,28 +633,6 @@ type SingleTarget =
 type MultiTarget = SingleTarget |
     "EveryTarget" | "SubTarget" | "All";
 
-/** Returns a Unit based on the Modular target selector. */
-function GetUnit(target: SingleTarget | (string & {})) {
-    try {
-        // This will throw if modular gets angry idfk.
-        const bum = JSPipeline.GetBattleUnitModelFromTarget(target);
-        return __UnitCache__.get(bum);
-    } catch (e) {
-        return null;
-    }
-}
-
-/** Returns an array of Units based on the Modular target selector. */
-// function GetUnits(target: MultiTarget | (string & {})) {
-//     __UnitCache__.resetIfEncounterUpdated();
-//     try {
-//         // This will throw if modular gets angry idfk.
-//         const ids = [...JSPipeline.GetInstIdFromMultiTarget(target)];
-//         return ids.map(id => __UnitCache__.get(id));
-//     } catch (e) {
-//         return [];
-//     }
-// }
 
 type ScriptProperties = "do-not-load" | "import-only";
 /** Declares the behaviour of this file.

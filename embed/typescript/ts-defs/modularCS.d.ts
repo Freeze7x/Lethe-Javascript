@@ -20,27 +20,34 @@
 // };
 
 /**
- * Writable Record that persists throughout the encounter. 
- * It is recommended that you apply a property directly to it under your mod's name
- * or a similar identifier, and write inside of that property to avoid collisions.
+ * A custom dictionary for tracking custom data throughout the Encounter.
+ * 
+ * It is recommended to get a "mod identifier" first, and then store what you need in there.
 */
-declare const EncounterData: {
-    get<T = {}>(key: string, defaultValue?: T): T;
-};
+// declare const EncounterData: {
+//     get<T = {}>(key: string, defaultValue?: T): T;
+// };
 
 /**
- * Writable Record that persists throughout the Limbus Company session. 
- * It is recommended that you apply a property directly to it under your mod's name
- * or a similar identifier, and write inside of that property to avoid collisions.
+ * A custom dictionary for tracking custom data throughout the Limbus Company Session.
+ * 
+ * It is recommended to follow a format similar to this to avoid collisions and have better control:
+ * @example
+ * const gData = GlobalData.get("Shane/MirrorDungeon2", {
+ *      packs: [new Pack(), new Pack()],
+ *      gifts: [new Gift()]
+ * });
 */
-declare const GlobalData: {
-    get<T = {}>(key: string, defaultValue?: T): T;
-};
+// declare const GlobalData: {
+//     get<T = {}>(key: string, defaultValue?: T): T;
+// };
 
 interface DotNetArray<T> extends Iterable<T> {
-    readonly Length: number; // Note the capitalized 'L' from C#
-    [index: number]: T;      // Access elements like standard array
+    readonly Length: number;
+    [index: number]: T;
 }
+
+type BattleUnitModel = Record<any, any>;
 
 /** A logger for recording messages and errors. */
 declare const logger: {
