@@ -122,7 +122,7 @@ public class Main : BasePlugin
 
             File.WriteAllText(Path.Combine(typescriptDefFolder, "modularJS.d.ts"), jsDef);
             File.WriteAllText(Path.Combine(typescriptDefFolder, "modularCS.d.ts"), csDef);
-            File.WriteAllText(Path.Combine(typescriptFolder, "tsconfig.json"), csDef);
+            File.WriteAllText(Path.Combine(typescriptFolder, "tsconfig.json"), tsConfig);
         }
     }
     private static void patchModular()

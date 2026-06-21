@@ -222,7 +222,7 @@ class Unit {
                     InvokeModular("getbuffcount", this.target, type) :
                     InvokeModular("getbuffcount", this.target, "neg") + InvokeModular("getbuffcount", this.target, "pos");
             }
-            AmplitudeConversion(buff: string, superPosition?: boolean) {
+            amplitudeConversion(buff: string, superPosition?: boolean) {
                 if (superPosition) this.invoke("vibrationswitch", buff, true);
                 else this.invoke("vibrationswitch", buff);
             }

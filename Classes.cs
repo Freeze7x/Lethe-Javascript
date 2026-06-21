@@ -21,6 +21,8 @@ using BepInEx.Configuration;
 using BepInEx;
 using MainUI;
 using LetheJavascript.JS;
+using Il2CppSystem.Threading.Tasks;
+using Il2CppSystem.Threading;
 
 namespace LetheJavascript.Classes;
 
@@ -337,7 +339,7 @@ public class ScriptRuntime
         engine.Execute(JS_CODE_PREPEND);
     }
     public void loadLetheJavascriptFolder(string folderDirectory)
-    {   
+    {
         foreach (var file in Directory.GetFiles(folderDirectory, "*.js", SearchOption.AllDirectories))
             LoadFile(file, folderDirectory);
     }
@@ -411,7 +413,6 @@ public class ScriptRuntime
     /// <param name="dir"></param>
     private void Listen(string dir)
     {
-
         FileSystemWatcher watcher = new(dir)
         {
             Filter = "*.js",
@@ -420,18 +421,33 @@ public class ScriptRuntime
             EnableRaisingEvents = true
         };
 
-        watcher.Changed += (sender, e) => FileChanged(e.FullPath);
-        watcher.Created += (sender, e) => Main.runtime.LoadFile(e.FullPath, dir);
-        watcher.Deleted += (sender, e) => Main.runtime.LoadFile(e.FullPath, dir);
+        watcher.Changed += (sender, e) => TryLoad(e.FullPath, true);
+        watcher.Created += (sender, e) => TryLoad(e.FullPath, false);
+        watcher.Deleted += (sender, e) => TryLoad(e.FullPath, false);
         watcher.Renamed += (sender, e) =>
         {
-            Main.runtime.LoadFile(e.OldFullPath, dir);
-            Main.runtime.LoadFile(e.FullPath, dir);
+            TryLoad(e.OldFullPath, false);
+            TryLoad(e.FullPath, false);
         };
 
         watchers.Add(dir, watcher);
     }
+    private static async void TryLoad(string path, bool importChecker)
+    {
+        await Task.Delay(500);
+        try
+        {
+            if (importChecker) Main.runtime.FileChanged(path);
+            else Main.runtime.LoadFile(path);
 
+            return;
+        }
+        catch (IOException e)
+        {
+            Main.Logger.LogError("aw hell nah bruh try load deez");
+            Main.Logger.LogError(e);
+        }
+    }
     private void FileChanged(string filePath)
     {
         HashSet<string> filesToLoad = [];
@@ -455,6 +471,6 @@ public class ScriptRuntime
         recursive(filePath);
 
         foreach (var file in filesToLoad)
-            LoadFile(file);
+            TryLoad(file, false);
     }
 }
