@@ -9,6 +9,7 @@ using Lethe;
 using System.IO;
 using System.Reflection;
 using System;
+using LetheJavascript.Patches;
 
 namespace LetheJavascript;
 
@@ -26,15 +27,21 @@ public class Main : BasePlugin
     public override void Load()
     {
         Harmony harmony = new(GUID);
-        harmony.PatchAll(typeof(Patches.ReloadPatches));
+        harmony.PatchAll(typeof(ReloadPatches));
+        // lowkey dont run this
+        // harmony.PatchAll(typeof(StupidPatches));
 
         Logger = BepInEx.Logging.Logger.CreateLogSource("LetheJavascript");
         Logger.LogInfo("runtime about to be init hell yeah");
         Logger.LogInfo($"lowkey hijacking lethe rn {LetheMain.modsPath}");
 
-        patchModular();
+        Logger.LogInfo("Setting up hooks");
+        Hooks.LetheJavascriptHooks.Setup();
+        Logger.LogInfo("Done setting up hooks maybe idk lets hope");
 
-        runtime = new()
+        patchModular();
+        
+        Runtime = new()
         {
             config_IoFullAccess = Config.Bind(
                 "Permission", "IOAccess", false,
@@ -46,7 +53,7 @@ public class Main : BasePlugin
             ).Value ? reloadBehaviour.onFileSave : reloadBehaviour.onLobby
         };
 
-        runtime.LoadAllFromModPath();
+        Runtime.LoadLetheModFolder();
 
         try
         {
@@ -67,7 +74,7 @@ public class Main : BasePlugin
 
         return file;
     }
-    public static ScriptRuntime runtime;
+    public static ScriptRuntime Runtime;
     /// <summary>
     /// Lowkey dont run this
     /// </summary>

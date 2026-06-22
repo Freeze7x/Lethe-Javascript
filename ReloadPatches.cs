@@ -11,7 +11,7 @@ public class ReloadPatches
     [HarmonyPostfix]
     private static void PostMainUILoad()
     {
-        if (Main.runtime.config_reloadBehaviour == Classes.reloadBehaviour.onLobby)
-            Main.runtime.LoadAllFromModPath();
+        if (Main.Runtime.config_reloadBehaviour == Classes.reloadBehaviour.onLobby)
+            Main.Runtime.LoadLetheModFolder();
     }
 }

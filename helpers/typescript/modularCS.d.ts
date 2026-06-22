@@ -55,16 +55,18 @@ declare const logger: {
     error(toLog: any): void;
 };
 
-declare class JSPipeline {
-    static GetBattleUnitModelListFromTarget(targetString: string): DotNetArray<BattleUnitModel>;
-    static GetBattleUnitModelFromTarget(target: string): BattleUnitModel;
-    static GetStageController(): Record<any, any>;
-    static SelfAction(): Record<any, any>;
-    static EncounterID: number;
-    static BattleUnitModelUtility: {
+declare const JSPipeline: {
+    GetBattleUnitModelListFromTarget(targetString: string): DotNetArray<BattleUnitModel>;
+    GetBattleUnitModelFromTarget(target: string): BattleUnitModel;
+    GetStageController(): Record<any, any>;
+    SelfAction(): Record<any, any>;
+    EncounterID: number;
+    BattleUnitModelUtility: {
         ChangeHp(bum: BattleUnitModel, number: number): void;
+        [x: string]: any;
     };
-}
+    [x: string]: any;
+};
 
 /** Manually invokes a function from Modular. */
 declare function InvokeModular<T extends number = number>(name: string, ...args: any[]): T;

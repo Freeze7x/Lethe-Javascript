@@ -18,26 +18,24 @@ class UnitPropertyClass {
 }
 /** A class representing a unit in the game. */
 class Unit {
-    get isSelf() {
-        return !!this.invoke("issameunit", "Self");
+    constructor(bum) {
+        this.battleUnitModel = bum;
+        const coreBum = JSPipeline.BattleUnitModelUtility.GetCore(bum);
+        this.core = coreBum ? Unit.unitCache.get(coreBum) : null;
+        this.instanceId = this.battleUnitModel.InstanceID;
+        this.target = "inst" + this.instanceId;
     }
+    get isSelf() { return !!this.invoke("issameunit", "Self"); }
     /** Returns a string usable by functions that only take "Self" or "Target". */
     get getIsTargetOrSelf() {
-        if (this.isSelf)
-            return "Self";
-        return "Target";
+        return this.isSelf ? "Self" : "Target";
     }
+    core;
     static unitCache = {
         registry: new WeakMap(),
-        encounterId: null,
         get(bum) {
-            return this.registry.get(bum) ?? this.registry.set(bum, new Unit(bum)).get(bum);
-        },
-        resetIfEncounterUpdated() {
-            if (this.encounterId !== Encounter.id) {
-                this.registry = new WeakMap();
-                this.encounterId = Encounter.id;
-            }
+            return this.registry.get(bum) ??
+                this.registry.set(bum, new Unit(bum)).get(bum);
         }
     };
     /** Returns a Unit based on the Modular target selector. */
@@ -195,7 +193,7 @@ class Unit {
              */
             getCount(type) {
                 return type ?
-                    InvokeModular("getbuffcount", this.target, type) :
+                    InvokeModular("getbuffcount", this.target, { negative: "neg", positive: "pos" }[type]) :
                     InvokeModular("getbuffcount", this.target, "neg") + InvokeModular("getbuffcount", this.target, "pos");
             }
             amplitudeConversion(buff, superPosition) {
@@ -460,11 +458,6 @@ class Unit {
             }
         },
     };
-    constructor(bum) {
-        this.battleUnitModel = bum;
-        this.instanceId = this.battleUnitModel.InstanceID;
-        this.target = "inst" + this.instanceId;
-    }
     /** A reference to the in-game BattleUnitModel that it represents.
      *
      *  Be careful using this, as a lot of things may not work as you think outside of the intended context

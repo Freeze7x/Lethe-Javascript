@@ -1,13 +1,14 @@
 {
+	/* Visit https://aka.ms/tsconfig to read more about this file */
 	"compilerOptions": {
 		"checkJs": true,
-		/* Visit https://aka.ms/tsconfig to read more about this file */
 		"verbatimModuleSyntax": true,
+		
 		"outDir": "../javascript",
+
 		"target": "esnext",
 		"lib": ["ESNext"],
-		/* Disable polyfill code for CommonJS modules */
-		// "esModuleInterop": false,
+
 		/* Other standard settings specified by tsc --init */
 		"forceConsistentCasingInFileNames": true, /* Ensure that casing is correct in imports. */
 		"strict": true, /* Enable all strict type-checking options. */

@@ -72,4 +72,9 @@
       SourceFiles="@(BuiltFiles)"
       DestinationFolder="$(LimbusCompanyFolder)\BepInEx\plugins\ClearScript\%(RecursiveDir)" />
   </Target>
+
+  <Target Name="BuildJS" BeforeTargets="BeforeBuild">
+      <Exec Command="npx tsx ./helpers/typescript/output.ts" />
+  </Target>
+  
 </Project>

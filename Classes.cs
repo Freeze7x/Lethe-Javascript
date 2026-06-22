@@ -10,7 +10,7 @@ using System.Reflection;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Runtime.CompilerServices;
-
+using System.Timers;
 
 using ModularSkillScripts;
 // using SharpCompress;
@@ -21,8 +21,8 @@ using BepInEx.Configuration;
 using BepInEx;
 using MainUI;
 using LetheJavascript.JS;
-using Il2CppSystem.Threading.Tasks;
-using Il2CppSystem.Threading;
+using System.Collections.Concurrent;
+using SharpCompress;
 
 namespace LetheJavascript.Classes;
 
@@ -59,7 +59,7 @@ public enum reloadBehaviour
 
 public class IO
 {
-    public readonly string userFolder = Main.runtime.config_IoFullAccess ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) : "";
+    public readonly string userFolder = Main.Runtime.config_IoFullAccess ? Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) : "";
     public IO(string modFolder)
     {
         this.modFolder = modFolder;
@@ -146,7 +146,7 @@ public class IO
     private static bool isPathAllowed(string fileDir, string folderRestriction)
     {
         // If full IO access is permitted, just let it rip.
-        if (Main.runtime.config_IoFullAccess) return true;
+        if (Main.Runtime.config_IoFullAccess) return true;
 
         fileDir = Path.GetFullPath(fileDir);
         folderRestriction = Path.GetFullPath(folderRestriction);
@@ -217,7 +217,6 @@ public class ScriptRuntime
     public readonly Dictionary<string, LoadedModule> LoadedModules = [];
     /// <summary>
     /// key is file path
-    /// 
     /// value is files that rely on the provided key
     /// </summary>
     public readonly Dictionary<string, HashSet<string>> Dependencies = [];
@@ -248,6 +247,7 @@ public class ScriptRuntime
         string contents = string.Join("\n", lines);
         foreach (var import in getImportsFromJs(contents, fileDirectory))
         {
+            // This could cause a memory leak but only if the user is lowkey like bruh wtf
             Dependencies.TryAdd(import, []);
             Dependencies[import].Add(fileDirectory);
         }
@@ -338,11 +338,6 @@ public class ScriptRuntime
         // Import helper classes. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
         engine.Execute(JS_CODE_PREPEND);
     }
-    public void loadLetheJavascriptFolder(string folderDirectory)
-    {
-        foreach (var file in Directory.GetFiles(folderDirectory, "*.js", SearchOption.AllDirectories))
-            LoadFile(file, folderDirectory);
-    }
     public void callScript(string scriptName, string method, object[] args)
     {
         // Main.Logger.LogInfo($"Looking for {scriptName}.js, calling {method} in it.");
@@ -361,7 +356,7 @@ public class ScriptRuntime
             Main.Logger.LogError(ex);
         }
     }
-    public void LoadAllFromModPath()
+    public void LoadLetheModFolder()
     {
         foreach (var modPath in Directory.GetDirectories(LetheMain.modsPath.FullPath))
         {
@@ -389,7 +384,7 @@ public class ScriptRuntime
             {
                 Main.Logger.LogInfo("Scanning for mexicans v2: " + jsPath);
                 jsFileModFolders.Add(jsPath, modPath);
-                Main.runtime.LoadFile(jsPath, modPath);
+                Main.Runtime.LoadFile(jsPath, modPath);
             }
         }
     }
@@ -407,6 +402,8 @@ public class ScriptRuntime
     }
     private readonly Dictionary<string, string> jsFileModFolders = [];
     private readonly Dictionary<string, FileSystemWatcher> watchers = [];
+    private static readonly HashSet<string> _queuedScriptsToUpdate = [];
+
     /// <summary>
     /// Listen for a ./javascript folder change.
     /// </summary>
@@ -421,56 +418,61 @@ public class ScriptRuntime
             EnableRaisingEvents = true
         };
 
-        watcher.Changed += (sender, e) => TryLoad(e.FullPath, true);
-        watcher.Created += (sender, e) => TryLoad(e.FullPath, false);
-        watcher.Deleted += (sender, e) => TryLoad(e.FullPath, false);
+        watcher.Changed += (sender, e) => _queuedScriptsToUpdate.Add(e.FullPath);
+        watcher.Created += (sender, e) => _queuedScriptsToUpdate.Add(e.FullPath);
+        watcher.Deleted += (sender, e) => _queuedScriptsToUpdate.Add(e.FullPath);
         watcher.Renamed += (sender, e) =>
         {
-            TryLoad(e.OldFullPath, false);
-            TryLoad(e.FullPath, false);
+            _queuedScriptsToUpdate.Add(e.OldFullPath);
+            _queuedScriptsToUpdate.Add(e.FullPath);
         };
 
         watchers.Add(dir, watcher);
     }
-    private static async void TryLoad(string path, bool importChecker)
-    {
-        await Task.Delay(500);
-        try
-        {
-            if (importChecker) Main.runtime.FileChanged(path);
-            else Main.runtime.LoadFile(path);
 
-            return;
-        }
-        catch (IOException e)
-        {
-            Main.Logger.LogError("aw hell nah bruh try load deez");
-            Main.Logger.LogError(e);
-        }
-    }
-    private void FileChanged(string filePath)
+    private HashSet<string> LoadFileAndDependants(string filePath)
     {
         HashSet<string> filesToLoad = [];
-        HashSet<string> filesTraveled = [];
         filesToLoad.Add(filePath);
 
         void recursive(string fp)
         {
-            filesTraveled.Add(fp);
             if (Dependencies.TryGetValue(fp, out var dependants))
             {
                 foreach (var dependant in dependants)
                 {
                     // This file depends on the changed file, add it to load list.
                     // Check the dependants of that file if we haven't yet.
-                    if (!filesToLoad.Add(dependant))
+                    if (filesToLoad.Add(dependant))
                         recursive(dependant);
                 }
             }
         }
         recursive(filePath);
 
-        foreach (var file in filesToLoad)
-            TryLoad(file, false);
+        foreach (var file in filesToLoad) LoadFile(file);
+
+        return filesToLoad;
+    }
+
+    internal void ReloadQueued()
+    {
+        if (_queuedScriptsToUpdate.Count == 0)
+        {
+            Main.Logger.LogWarning("No scripts to reload mf");
+            return;
+        }
+
+        HashSet<string> loadedFiles = [];
+
+        foreach (var file in _queuedScriptsToUpdate)
+        {
+            if (loadedFiles.Contains(file))
+                continue;
+                
+            loadedFiles.UnionWith(LoadFileAndDependants(file));
+        }
+
+        _queuedScriptsToUpdate.Clear();
     }
 }

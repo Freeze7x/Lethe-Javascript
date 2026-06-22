@@ -32,28 +32,30 @@ namespace Unit {
 
 /** A class representing a unit in the game. */
 class Unit {
-    get isSelf() {
-        return !!this.invoke("issameunit", "Self");
+    private constructor(bum: BattleUnitModel) {
+        this.battleUnitModel = bum;
+
+        const coreBum: BattleUnitModel = JSPipeline.BattleUnitModelUtility.GetCore(bum);
+        this.core = coreBum ? Unit.unitCache.get(coreBum) : null;
+
+        this.instanceId = this.battleUnitModel.InstanceID;
+        this.target = "inst" + this.instanceId;
     }
+
+
+    get isSelf() { return !!this.invoke("issameunit", "Self"); }
 
     /** Returns a string usable by functions that only take "Self" or "Target". */
     get getIsTargetOrSelf() {
-        if (this.isSelf) return "Self";
-        return "Target";
+        return this.isSelf ? "Self" : "Target";
     }
 
-
+    core: Unit | null;
     private static unitCache = {
         registry: new WeakMap<BattleUnitModel, Unit>(),
-        encounterId: null as number | null,
         get(bum: BattleUnitModel) {
-            return this.registry.get(bum) ?? this.registry.set(bum, new Unit(bum)).get(bum)!;
-        },
-        resetIfEncounterUpdated() {
-            if (this.encounterId !== Encounter.id) {
-                this.registry = new WeakMap();
-                this.encounterId = Encounter.id;
-            }
+            return this.registry.get(bum) ??
+                this.registry.set(bum, new Unit(bum)).get(bum)!;
         }
     };
 
@@ -185,7 +187,7 @@ class Unit {
                     potency: InvokeModular("getbuff", this.target, keyword, "stack") as number,
                     count: InvokeModular("getbuff", this.target, keyword, "turn") as number,
                     consumed: InvokeModular("getbuff", this.target, keyword, "consumed") as number,
-                };
+                } as const;
             }
             /**
              * Give this unit a buff.
@@ -217,9 +219,9 @@ class Unit {
              * Get the count of buffs on this unit.
              * @param type - The type of buff to count.
              */
-            getCount(type?: "neg" | "pos") {
+            getCount(type?: "negative" | "positive") {
                 return type ?
-                    InvokeModular("getbuffcount", this.target, type) :
+                    InvokeModular("getbuffcount", this.target, { negative: "neg", positive: "pos" }[type]) :
                     InvokeModular("getbuffcount", this.target, "neg") + InvokeModular("getbuffcount", this.target, "pos");
             }
             amplitudeConversion(buff: string, superPosition?: boolean) {
@@ -460,7 +462,7 @@ class Unit {
                     slash: 0,
                     pierce: 1,
                     blunt: 2
-                } as const
+                } as const;
 
                 if (args?.sin) sin = sinMap[args.sin];
                 if (args?.type) type = typeMap[args.type];
@@ -473,11 +475,6 @@ class Unit {
         },
     } as const satisfies Record<string, typeof UnitPropertyClass>;
 
-    private constructor(bum: BattleUnitModel) {
-        this.battleUnitModel = bum;
-        this.instanceId = this.battleUnitModel.InstanceID;
-        this.target = "inst" + this.instanceId;
-    }
     /** A reference to the in-game BattleUnitModel that it represents.
      * 
      *  Be careful using this, as a lot of things may not work as you think outside of the intended context

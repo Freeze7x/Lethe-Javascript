@@ -59,6 +59,13 @@ public static class Pipeline
     public static BattleActionModel SelfAction() => ModularConsequenceRunJavascript.lastSA.modsa_selfAction;
     public class BattleUnitModelUtility
     {
+        public static BattleUnitModel GetCore(BattleUnitModel bum)
+        {
+            BattleUnitModel_Abnormality_Part part = bum.TryCast<BattleUnitModel_Abnormality_Part>();
+            if (part != null) 
+                return part.Abnormality;
+            else return null;
+        }
         public static void ChangeHp(BattleUnitModel bum, int number)
         {
             bum.ChangeHp(number, DAMAGE_SOURCE_TYPE.NONE, BATTLE_EVENT_TIMING.NONE);
