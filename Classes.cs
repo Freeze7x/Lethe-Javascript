@@ -23,6 +23,7 @@ using MainUI;
 using LetheJavascript.JS;
 using System.Collections.Concurrent;
 using SharpCompress;
+using LibCpp2IL;
 
 namespace LetheJavascript.Classes;
 
@@ -49,12 +50,6 @@ public class LoadedModule
     {
         parent.LoadFile(FileDirectory, ModFolder);
     }
-}
-
-public enum reloadBehaviour
-{
-    onLobby,
-    onFileSave
 }
 
 public class IO
@@ -176,7 +171,6 @@ public class ScriptRuntime
 {
     #region Configurations
     public bool config_IoFullAccess = false;
-    public reloadBehaviour config_reloadBehaviour = reloadBehaviour.onFileSave;
     #endregion
     public static int InvokeModular(string name, params object[] args)
     {
@@ -243,6 +237,12 @@ public class ScriptRuntime
             return;
         }
 
+        if (fileDirectory.EndsWith(".i.ts"))
+        {
+            Main.Logger.LogInfo($"File {fileDirectory} is to be ignored, skipping execution.");
+            return;
+        }
+
         string[] lines = File.ReadAllLines(fileDirectory);
         string contents = string.Join("\n", lines);
         foreach (var import in getImportsFromJs(contents, fileDirectory))
@@ -252,7 +252,7 @@ public class ScriptRuntime
             Dependencies[import].Add(fileDirectory);
         }
 
-
+        /*
         var test = Regex.Match(contents, @"ScriptBehaviour\s*=\s*\[(.*?)\]", RegexOptions.Singleline);
         if (test.Success)
         {
@@ -268,6 +268,8 @@ public class ScriptRuntime
                 return;
             }
         }
+        */
+
         V8ScriptEngine engine = new(V8ScriptEngineFlags.EnableDynamicModuleImports);
         engine.DocumentSettings.AccessFlags = DocumentAccessFlags.EnableFileLoading;
         engine.DocumentSettings.SearchPath = Path.GetDirectoryName(fileDirectory);
@@ -375,9 +377,8 @@ public class ScriptRuntime
             }
 
             // Add a listener so we can dynamically update and stuff idfk.
-            if (config_reloadBehaviour == reloadBehaviour.onFileSave)
-                if (!watchers.ContainsKey(javascriptFolder))
-                    Listen(javascriptFolder);
+            if (!watchers.ContainsKey(javascriptFolder))
+                Listen(javascriptFolder);
 
             // Load the files lowkey.
             foreach (var jsPath in Directory.GetFiles(javascriptFolder, "*.js", SearchOption.AllDirectories))
@@ -455,23 +456,19 @@ public class ScriptRuntime
         return filesToLoad;
     }
 
-    internal void ReloadQueued()
+    public void ReloadQueued()
     {
         if (_queuedScriptsToUpdate.Count == 0)
         {
-            Main.Logger.LogWarning("No scripts to reload mf");
-            return;
+            Main.Logger.LogWarning("No scripts to reload mf"); return;
         }
 
-        HashSet<string> loadedFiles = [];
-
-        foreach (var file in _queuedScriptsToUpdate)
-        {
-            if (loadedFiles.Contains(file))
-                continue;
-                
-            loadedFiles.UnionWith(LoadFileAndDependants(file));
-        }
+        HashSet<string> filesToLoad = [
+            .._queuedScriptsToUpdate,
+            .._queuedScriptsToUpdate.SelectMany(script => Dependencies.GetOrDefault(script) ?? [])
+        ];
+        foreach (var file in filesToLoad)
+            LoadFile(file);
 
         _queuedScriptsToUpdate.Clear();
     }

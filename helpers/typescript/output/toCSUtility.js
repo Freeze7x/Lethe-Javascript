@@ -414,6 +414,24 @@ class Unit {
             get instId() { return InvokeModular("getinstid", this.target); }
             /** This unit's Character ID. Only for Sinners */
             get characterId() { return InvokeModular("getcharacterid", this.target); }
+            /** The sinner this unit is, if applicable. */
+            get sinner() {
+                switch (this.characterId) {
+                    case 1: return "yi-sang";
+                    case 2: return "faust";
+                    case 3: return "don quixote";
+                    case 4: return "ryoshu";
+                    case 5: return "meursault";
+                    case 6: return "hong-lu";
+                    case 7: return "heathcliff";
+                    case 8: return "ishmael";
+                    case 9: return "rodion";
+                    case 10: return "sinclair";
+                    case 11: return "outis";
+                    case 12: return "gregor";
+                    default: return null;
+                }
+            }
             /**
             * Check if this unit has a keyword or association.
             * @param keywordAssoc - A keyword or array of keywords to check
@@ -460,6 +478,17 @@ class Unit {
             }
         },
     };
+    static lookup = {
+        sin: {
+            "wrath": "CRIMSON",
+            "lust": "SCARLET",
+            "sloth": "AMBER",
+            "gluttony": "SHAMROCK",
+            "gloom": "AZURE",
+            "pride": "INDIGO",
+            "envy": "VIOLET",
+        }
+    };
     /** A reference to the in-game BattleUnitModel that it represents.
      *
      *  Be careful using this, as a lot of things may not work as you think outside of the intended context
@@ -492,7 +521,7 @@ class Unit {
      * Check if this unit is actionable.
      * If the unit does not exist, this returns null.
      */
-    actionable() {
+    get actionable() {
         switch (InvokeModular("isactionable", this.target)) {
             case 0: return false;
             case 1: return true;
@@ -561,13 +590,14 @@ class Unit {
         }
     });
 }
-/** A collection of properties related to the current encounter. */
-const Encounter = {
-    get turn() { return InvokeModular("getround"); },
-    get wave() { return InvokeModular("getwave"); },
-    get id() { return InvokeModular("getencounteruid"); },
-    get encounterType() { return InvokeModular("isfocused") ? "focused" : "unfocused"; },
-    getSinsInDashboard(sin, layer) {
+/** A collection of properties related to combat as a whole. */
+class Battle {
+    constructor() { }
+    static get turn() { return InvokeModular("getround"); }
+    static get wave() { return InvokeModular("getwave"); }
+    static get id() { return InvokeModular("getencounteruid"); }
+    static get encounterType() { return InvokeModular("isfocused") ? "focused" : "unfocused"; }
+    static getSinsInDashboard(sin, layer) {
         const sinMap = {
             wrath: "CRIMSON",
             lust: "SCARLET",
@@ -590,7 +620,52 @@ const Encounter = {
         const [layerType, upcomingFlag] = layerMap[layer] || ["BOTH", 0];
         return InvokeModular("getsinsindashboard", sinMapped, layerType, upcomingFlag);
     }
-};
+    static resourceProxy(getter, setter) {
+        return new Proxy({}, {
+            get(t, key) {
+                switch (key) {
+                    case "wrath": return getter(0);
+                    case "lust": return getter(1);
+                    case "sloth": return getter(2);
+                    case "gluttony": return getter(3);
+                    case "gloom": return getter(4);
+                    case "pride": return getter(5);
+                    case "envy": return getter(6);
+                    default: return 0;
+                }
+            },
+            set(t, key, value) {
+                switch (key) {
+                    case "wrath": return setter(0, value);
+                    case "lust": return setter(1, value);
+                    case "sloth": return setter(2, value);
+                    case "gluttony": return setter(3, value);
+                    case "gloom": return setter(4, value);
+                    case "pride": return setter(5, value);
+                    case "envy": return setter(6, value);
+                    default: return false;
+                }
+            }
+        });
+    }
+    static egoResources = {
+        ally: this.resourceProxy((i) => InvokeModular("getresource", i), (i, v) => {
+            InvokeModular("resource", i, v - InvokeModular("getresource", i));
+            return true;
+        }),
+        enemy: this.resourceProxy((i) => InvokeModular("getresource", i, "Enemy"), (i, v) => {
+            InvokeModular("resource", i, v - InvokeModular("getresource", i, "Enemy"), "Enemy");
+            return true;
+        }),
+    };
+    static getResonance(sin, perfect) {
+        return sin === "highest" ?
+            InvokeModular("getresonance", perfect ? "highperfect" : "highres")
+            :
+                InvokeModular("getresonance", (perfect ? "perfect" : "") + Unit.lookup.sin[sin]);
+    }
+}
+;
 /** A collection of mathematical functions not available in the standard Math object. */
 const Mathf = {
     // ...Math,
@@ -618,17 +693,3 @@ const Mathf = {
         return (Math.random() * (y - x)) + x;
     }
 };
-/** Declares the behaviour of this file.
-*
-* Ensure that this array:
-* * Contains explict strings.
-* * Does not contain variable/property references.
-* * Is not commented out (It will still be picked up).
-*
-* The top-most instance of redeclaration in the file will be read.
-* * `do-not-load`/`import-only` prevents the file from being loaded at all.
-*     * `import-only` should be used to clarify it's an import.
-*     * `do-not-load` should be used to "deactivate" scripts.
-*/
-let ScriptBehaviour;
-ScriptBehaviour = [];

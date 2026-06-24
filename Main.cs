@@ -27,7 +27,6 @@ public class Main : BasePlugin
     public override void Load()
     {
         Harmony harmony = new(GUID);
-        harmony.PatchAll(typeof(ReloadPatches));
         // lowkey dont run this
         // harmony.PatchAll(typeof(StupidPatches));
 
@@ -41,17 +40,7 @@ public class Main : BasePlugin
 
         patchModular();
         
-        Runtime = new()
-        {
-            config_IoFullAccess = Config.Bind(
-                "Permission", "IOAccess", false,
-                "Allow .js files to access the entire file system instead of just the plugins folder. Leave this off unless you know what you are doing."
-            ).Value,
-            config_reloadBehaviour = Config.Bind(
-                "General", "HotReload", true,
-                "Whether to hot reload .js files when they are changed. If false, you will have to reload the lobby to see changes. If true, changes will be applied when the file is saved."
-            ).Value ? reloadBehaviour.onFileSave : reloadBehaviour.onLobby
-        };
+        Runtime = new();
 
         Runtime.LoadLetheModFolder();
 
