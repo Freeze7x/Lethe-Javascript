@@ -11,14 +11,14 @@ type IntRange<F extends number, T extends number> = Exclude<Enumerate<T>, Enumer
 
 abstract class UnitPropertyClass {
     constructor(protected readonly parent: Unit) { }
-    protected invoke(funcName: string, ...args: any[]) {
-        this.parent.invoke(funcName, ...args);
+    protected invoke(funcName: string, ...args: unknown[]) {
+        return this.parent.invoke(funcName, ...args);
     }
     protected get target() {
         return this.parent.target;
     };
-    protected get getTargetOrSelf() {
-        return this.parent.getIsTargetOrSelf;
+    protected get selfOrTarget() {
+        return this.parent.selfOrTarget;
         // return this.parent.target as "Self";
     }
 }
@@ -44,7 +44,7 @@ class Unit {
     get isSelf() { return !!this.invoke("issameunit", "Self"); }
 
     /** Returns a string usable by functions that only take "Self" or "Target". */
-    get getIsTargetOrSelf() {
+    get selfOrTarget() {
         return this.isSelf ? "Self" : "Target";
     }
 
@@ -170,9 +170,10 @@ class Unit {
              * @returns Array of stagger threshold values
              */
             getThresholds() {
-                return new Array(InvokeModular("getbreakcount", this.target)).fill(null).map((_, index) => {
-                    return InvokeModular("getbreakvalue", this.target, index);
-                });
+                return Array.from(
+                    { length: InvokeModular("getbreakcount", this.target) },
+                    (_, index) => InvokeModular("getbreakvalue", this.target, index)
+                );
             }
         },
         Buff: class extends UnitPropertyClass {
@@ -253,7 +254,7 @@ class Unit {
         },
         Skill: class extends UnitPropertyClass {
             /** The current skill's base power. */
-            get basePower() { return InvokeModular("getskillbase", this.getTargetOrSelf); }
+            get basePower() { return InvokeModular("getskillbase", this.selfOrTarget); }
             /** Add to the skill's base power. */
             addBasePower(v: number) {
                 if (!this.parent.isSelf) return;
@@ -261,7 +262,7 @@ class Unit {
             }
 
             /** The current skill's coin power. */
-            get coinPower() { return InvokeModular("getcoinscale", this.getTargetOrSelf, 0); }
+            get coinPower() { return InvokeModular("getcoinscale", this.selfOrTarget, 0); }
             /** Add to the current skill's coin power. */
             addCoinPower(v: number) {
                 if (!this.parent.isSelf) return;
@@ -269,7 +270,7 @@ class Unit {
             }
             /** The current skill's coin power at a specific index. */
             getCoinAtIndexPower(index: number) {
-                return InvokeModular("getcoinscale", this.getTargetOrSelf, index);
+                return InvokeModular("getcoinscale", this.selfOrTarget, index);
             }
 
             /** Add to the current skill's clash power. */
@@ -279,27 +280,27 @@ class Unit {
             }
 
             /** Get the current skill's power. */
-            get power() { return InvokeModular("getcurrentpower", this.getTargetOrSelf); }
+            get power() { return InvokeModular("getcurrentpower", this.selfOrTarget); }
 
             /** Get the current skill's rank. */
-            get rank() { return InvokeModular("getskillrank", this.getTargetOrSelf); }
+            get rank() { return InvokeModular("getskillrank", this.selfOrTarget); }
 
             /** Get or set the skill's attack weight. */
-            get weight() { return InvokeModular("getskillatkweight", this.getTargetOrSelf); }
+            get weight() { return InvokeModular("getskillatkweight", this.selfOrTarget); }
             set weight(v) {
                 v |= 0;
-                const cur = InvokeModular("getskillatkweight", this.getTargetOrSelf);
+                const cur = InvokeModular("getskillatkweight", this.selfOrTarget);
                 InvokeModular("atkweight", v - cur);
             }
 
             /** Get the current skill's level correction + this unit's offense level. */
-            get level() { return InvokeModular("getskilllevel", this.getTargetOrSelf); }
+            get level() { return InvokeModular("getskilllevel", this.selfOrTarget); }
             /** Get the current skill's level correction. */
-            get correction() { return InvokeModular("getskillatklevel", this.getTargetOrSelf); }
+            get correction() { return InvokeModular("getskillatklevel", this.selfOrTarget); }
 
             /** The current skill's attack type. */
             get attackType(): Unit.AttackType | "none" {
-                switch (InvokeModular<0 | 1 | 2 | 3>("getskillatk", this.getTargetOrSelf)) {
+                switch (InvokeModular<0 | 1 | 2 | 3>("getskillatk", this.selfOrTarget)) {
                     case 0: return "slash";
                     case 1: return "pierce";
                     case 2: return "blunt";
@@ -318,7 +319,7 @@ class Unit {
 
             /** The current skill's sin affinity. */
             get sin(): Unit.Sin | "none" {
-                switch (InvokeModular<IntRange<0, 11>>("getskillattribute", this.getTargetOrSelf)) {
+                switch (InvokeModular<IntRange<0, 11>>("getskillattribute", this.selfOrTarget)) {
                     case 0: return "wrath";
                     case 1: return "lust";
                     case 2: return "sloth";
@@ -345,7 +346,7 @@ class Unit {
 
             /** The current skill's defense type, if any. */
             get defenseType(): Unit.DefenseType | "none" {
-                switch (InvokeModular<IntRange<0, 5>>("getskilldeftype", this.getTargetOrSelf)) {
+                switch (InvokeModular<IntRange<0, 5>>("getskilldeftype", this.selfOrTarget)) {
                     case 1: return "guard";
                     case 2: return "evade";
                     case 3: return "counter";
@@ -361,7 +362,7 @@ class Unit {
             }
 
             get operator() {
-                switch (InvokeModular("getcoinoperator", this.getTargetOrSelf, 0)) {
+                switch (InvokeModular("getcoinoperator", this.selfOrTarget, 0)) {
                     case 1: return "+";
                     case 2: return "-";
                     case 3: return "*";
@@ -427,7 +428,7 @@ class Unit {
                 switch (this.characterId) {
                     case 1: return "yi-sang";
                     case 2: return "faust";
-                    case 3: return "don quixote";
+                    case 3: return "don-quixote";
                     case 4: return "ryoshu";
                     case 5: return "meursault";
                     case 6: return "hong-lu";
@@ -513,7 +514,7 @@ class Unit {
     /** Invokes a modular function, with the first parameter as this unit's target selector.
      * * Do not use this to invoke functions that don't use targets as the first parameter.
      */
-    invoke(funcName: string, ...args: any[]) {
+    invoke(funcName: string, ...args: unknown[]) {
         return InvokeModular(funcName, this.target, ...args);
     }
 
@@ -593,7 +594,7 @@ class Unit {
 
 /** A collection of properties related to combat as a whole. */
 class Battle {
-    private constructor() {}
+    private constructor() { }
     static get turn() { return InvokeModular("getround"); }
     static get wave() { return InvokeModular("getwave"); }
     static get id() { return InvokeModular("getencounteruid"); }
