@@ -7,15 +7,14 @@ class UnitPropertyClass {
         this.parent = parent;
     }
     invoke(funcName, ...args) {
-        this.parent.invoke(funcName, ...args);
+        return this.parent.invoke(funcName, ...args);
     }
     get target() {
         return this.parent.target;
     }
     ;
-    get getTargetOrSelf() {
-        return this.parent.getIsTargetOrSelf;
-        // return this.parent.target as "Self";
+    get selfOrTarget() {
+        return this.parent.selfOrTarget;
     }
 }
 /** A class representing a unit in the game. */
@@ -29,7 +28,7 @@ class Unit {
     }
     get isSelf() { return !!this.invoke("issameunit", "Self"); }
     /** Returns a string usable by functions that only take "Self" or "Target". */
-    get getIsTargetOrSelf() {
+    get selfOrTarget() {
         return this.isSelf ? "Self" : "Target";
     }
     core;
@@ -150,9 +149,7 @@ class Unit {
              * @returns Array of stagger threshold values
              */
             getThresholds() {
-                return new Array(InvokeModular("getbreakcount", this.target)).fill(null).map((_, index) => {
-                    return InvokeModular("getbreakvalue", this.target, index);
-                });
+                return Array.from({ length: InvokeModular("getbreakcount", this.target) }, (_, index) => InvokeModular("getbreakvalue", this.target, index));
             }
         },
         Buff: class extends UnitPropertyClass {
@@ -231,7 +228,7 @@ class Unit {
         },
         Skill: class extends UnitPropertyClass {
             /** The current skill's base power. */
-            get basePower() { return InvokeModular("getskillbase", this.getTargetOrSelf); }
+            get basePower() { return InvokeModular("getskillbase", this.selfOrTarget); }
             /** Add to the skill's base power. */
             addBasePower(v) {
                 if (!this.parent.isSelf)
@@ -239,7 +236,7 @@ class Unit {
                 InvokeModular("base", v);
             }
             /** The current skill's coin power. */
-            get coinPower() { return InvokeModular("getcoinscale", this.getTargetOrSelf, 0); }
+            get coinPower() { return InvokeModular("getcoinscale", this.selfOrTarget, 0); }
             /** Add to the current skill's coin power. */
             addCoinPower(v) {
                 if (!this.parent.isSelf)
@@ -248,7 +245,7 @@ class Unit {
             }
             /** The current skill's coin power at a specific index. */
             getCoinAtIndexPower(index) {
-                return InvokeModular("getcoinscale", this.getTargetOrSelf, index);
+                return InvokeModular("getcoinscale", this.selfOrTarget, index);
             }
             /** Add to the current skill's clash power. */
             addClashPower(v) {
@@ -257,23 +254,23 @@ class Unit {
                 InvokeModular("clash", v);
             }
             /** Get the current skill's power. */
-            get power() { return InvokeModular("getcurrentpower", this.getTargetOrSelf); }
+            get power() { return InvokeModular("getcurrentpower", this.selfOrTarget); }
             /** Get the current skill's rank. */
-            get rank() { return InvokeModular("getskillrank", this.getTargetOrSelf); }
+            get rank() { return InvokeModular("getskillrank", this.selfOrTarget); }
             /** Get or set the skill's attack weight. */
-            get weight() { return InvokeModular("getskillatkweight", this.getTargetOrSelf); }
+            get weight() { return InvokeModular("getskillatkweight", this.selfOrTarget); }
             set weight(v) {
                 v |= 0;
-                const cur = InvokeModular("getskillatkweight", this.getTargetOrSelf);
+                const cur = InvokeModular("getskillatkweight", this.selfOrTarget);
                 InvokeModular("atkweight", v - cur);
             }
             /** Get the current skill's level correction + this unit's offense level. */
-            get level() { return InvokeModular("getskilllevel", this.getTargetOrSelf); }
+            get level() { return InvokeModular("getskilllevel", this.selfOrTarget); }
             /** Get the current skill's level correction. */
-            get correction() { return InvokeModular("getskillatklevel", this.getTargetOrSelf); }
+            get correction() { return InvokeModular("getskillatklevel", this.selfOrTarget); }
             /** The current skill's attack type. */
             get attackType() {
-                switch (InvokeModular("getskillatk", this.getTargetOrSelf)) {
+                switch (InvokeModular("getskillatk", this.selfOrTarget)) {
                     case 0: return "slash";
                     case 1: return "pierce";
                     case 2: return "blunt";
@@ -297,7 +294,7 @@ class Unit {
             }
             /** The current skill's sin affinity. */
             get sin() {
-                switch (InvokeModular("getskillattribute", this.getTargetOrSelf)) {
+                switch (InvokeModular("getskillattribute", this.selfOrTarget)) {
                     case 0: return "wrath";
                     case 1: return "lust";
                     case 2: return "sloth";
@@ -338,7 +335,7 @@ class Unit {
             }
             /** The current skill's defense type, if any. */
             get defenseType() {
-                switch (InvokeModular("getskilldeftype", this.getTargetOrSelf)) {
+                switch (InvokeModular("getskilldeftype", this.selfOrTarget)) {
                     case 1: return "guard";
                     case 2: return "evade";
                     case 3: return "counter";
@@ -352,7 +349,7 @@ class Unit {
                 return id !== -1 ? id : null;
             }
             get operator() {
-                switch (InvokeModular("getcoinoperator", this.getTargetOrSelf, 0)) {
+                switch (InvokeModular("getcoinoperator", this.selfOrTarget, 0)) {
                     case 1: return "+";
                     case 2: return "-";
                     case 3: return "*";
@@ -419,7 +416,7 @@ class Unit {
                 switch (this.characterId) {
                     case 1: return "yi-sang";
                     case 2: return "faust";
-                    case 3: return "don quixote";
+                    case 3: return "don-quixote";
                     case 4: return "ryoshu";
                     case 5: return "meursault";
                     case 6: return "hong-lu";
@@ -692,4 +689,63 @@ const Mathf = {
             return Math.random() * x;
         return (Math.random() * (y - x)) + x;
     }
+};
+/**
+ * Dynamic proxy for invoking Modular functions.
+ *
+ * Any property access is treated as a modular function name and returns
+ * a callable wrapper around `InvokeModular`.
+ *
+ * Function names are case-insensitive and cached after first access.
+ *
+ * @example
+ * Modular.healhp("Self", 10);
+ * Modular["healsp"]("Self", -10);
+ * M.haspassive("Target", 100000);
+ */
+const Modular = (() => {
+    const cache = new Map();
+    return new Proxy({}, {
+        get(_, funcName) {
+            funcName = funcName.toLowerCase();
+            if (!cache.has(funcName))
+                cache.set(funcName, (...args) => InvokeModular(funcName, ...args));
+            return cache.get(funcName);
+        },
+        set() { return false; }
+    });
+})(), 
+/**@see Modular*/
+M = Modular;
+const test = [];
+class LetheStorage {
+    concurDict;
+    constructor(concurDict) {
+        this.concurDict = concurDict;
+    }
+    setItem(key, value) {
+        this.concurDict[key] =
+            typeof value === "string" ? ["string", value] : ["any", JSON.stringify(value)];
+    }
+    getItem(key) {
+        const dat = this.concurDict[key];
+        if (!dat)
+            return null;
+        return dat[0] === "string" ? dat[1] : JSON.parse(dat[1]);
+    }
+}
+//@ts-ignore
+const console = {
+    log(...args) {
+        //@ts-ignore
+        return logger.log(args.join(', '));
+    },
+    error(...args) {
+        //@ts-ignore
+        return logger.error(args.join(', '));
+    }
+};
+const SessionData = {
+    //@ts-ignore
+    encounter: new LetheStorage(__encDict), global: new LetheStorage(__gloDict),
 };

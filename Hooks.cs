@@ -27,10 +27,10 @@ public class LetheJavascriptHooks : MonoBehaviour
     internal void Update()
     {
         bool ctrlModifier =
-            Input.GetKeyDown(KeyCode.LeftControl) ||
-            Input.GetKeyDown(KeyCode.RightControl);
+            Input.GetKey(KeyCode.LeftControl) ||
+            Input.GetKey(KeyCode.RightControl);
 
-        if (!ctrlModifier)
+        if (ctrlModifier)
         {
             bool keyDown = Input.GetKeyDown(KeyCode.R);
             if (keyDown)

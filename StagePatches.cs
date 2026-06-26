@@ -1,7 +1,8 @@
 ﻿using HarmonyLib;
-using Il2CppSystem;
-using Il2CppSystem.Collections.Generic;
+using System;
+using System.Collections.Generic;
 using Microsoft.ClearScript;
+using System.Collections.Concurrent;
 
 namespace LetheJavascript.Patches;
 
@@ -11,17 +12,8 @@ public class StagePatches
     // public static readonly JS.ModData EncounterData;
     public static class GameData
     {
-        public static readonly Dictionary<string, dynamic> _RegistryGlobal = new();
-        public static readonly Dictionary<string, dynamic> _RegistryEncounter = new();
-        public static dynamic Get(string type, string key)
-        {
-            return type switch
-            {
-                "global" => _RegistryGlobal[key],
-                "encounter" => _RegistryEncounter[key],
-                _ => null,
-            };
-        }
+        public static readonly PropertyBag _RegistryGlobal = [];
+        public static readonly PropertyBag _RegistryEncounter = [];
     }
     static StagePatches()
     {
@@ -34,6 +26,6 @@ public class StagePatches
     {
         // Increment the encounter ID.
         EncounterID++;
-        GameData._RegistryGlobal.Clear();
+        GameData._RegistryEncounter.ClearNoCheck();
     }
 }

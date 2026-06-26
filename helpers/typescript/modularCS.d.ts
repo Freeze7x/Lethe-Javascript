@@ -50,10 +50,10 @@ interface DotNetArray<T> extends Iterable<T> {
 type BattleUnitModel = Record<any, any>;
 
 /** A logger for recording messages and errors. */
-declare const logger: {
-    log(toLog: any): void;
-    error(toLog: any): void;
-};
+// declare const logger: {
+//     log(toLog: any): void;
+//     error(toLog: any): void;
+// };
 
 declare const JSPipeline: {
     GetBattleUnitModelListFromTarget(targetString: string): DotNetArray<BattleUnitModel>;

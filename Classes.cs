@@ -329,15 +329,15 @@ public class ScriptRuntime
             error = (Action<object>)(x => Main.Logger.LogError($"[JS] {x}"))
         });
 
-        // Import global game data and IO access.
-        // engine.AddHostObject("EncounterData", StagePatches.EncounterData);
-        // engine.AddHostObject("GlobalData", StagePatches.GlobalData);
+        // Import global game data.
+        engine.AddHostObject("__encDict", StagePatches.GameData._RegistryEncounter);
+        engine.AddHostObject("__gloDict", StagePatches.GameData._RegistryGlobal);
 
         // engine.AddHostObject("IO", new IO(module.ModFolder));
 
         engine.AddHostType("JSPipeline", typeof(Pipeline));
 
-        // Import helper classes. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
+        // Import prefix data. https://pbs.twimg.com/media/FbbTu_sWIAEIR9T.jpg
         engine.Execute(JS_CODE_PREPEND);
     }
     public void callScript(string scriptName, string method, object[] args)

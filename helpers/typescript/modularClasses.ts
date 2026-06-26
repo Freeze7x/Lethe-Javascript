@@ -19,7 +19,6 @@ abstract class UnitPropertyClass {
     };
     protected get selfOrTarget() {
         return this.parent.selfOrTarget;
-        // return this.parent.target as "Self";
     }
 }
 namespace Unit {
@@ -716,3 +715,74 @@ type SingleTarget =
     "adjLeft" | "adjRight";
 type MultiTarget = SingleTarget |
     "EveryTarget" | "SubTarget" | "All";
+
+
+/**
+ * Dynamic proxy for invoking Modular functions.
+ *
+ * Any property access is treated as a modular function name and returns
+ * a callable wrapper around `InvokeModular`.
+ *
+ * Function names are case-insensitive and cached after first access.
+ *
+ * @example
+ * Modular.healhp("Self", 10);
+ * Modular["healsp"]("Self", -10);
+ * M.haspassive("Target", 100000);
+ */
+const Modular = (() => {
+    const cache = new Map<string, (...args: any[]) => number>();
+    return new Proxy({}, {
+        get(_, funcName: string) {
+            funcName = funcName.toLowerCase();
+
+            if (!cache.has(funcName)) cache.set(funcName, (...args: any[]) => InvokeModular(funcName, ...args));
+
+            return cache.get(funcName)!;
+        },
+        set() { return false; }
+    }) as { [x: string]: (...args: any[]) => number; };
+})(),
+    /**@see Modular*/
+    M = Modular;
+
+
+interface JSONStringify {
+    primitive: number | string | boolean | undefined | null;
+    object: JSONStringify["primitive"][] | { [x: string]: JSONStringify["all"]; };
+    all: JSONStringify["primitive" | "object"];
+}
+type JSONifiable = JSONStringify["all"];
+
+const test: JSONifiable = [];
+class LetheStorage {
+    constructor(private readonly concurDict: Record<string, ["string" | "any", string]>) { }
+
+    setItem(key: string, value: JSONifiable) {
+        this.concurDict[key] =
+            typeof value === "string" ? ["string", value] : ["any", JSON.stringify(value)];
+    }
+    getItem(key: string) {
+        const dat = this.concurDict[key];
+        if (!dat) return null;
+
+        return dat[0] === "string" ? dat[1] : JSON.parse(dat[1]);
+    }
+}
+
+//@ts-ignore
+const console = {
+    log(...args: any[]) {
+        //@ts-ignore
+        return logger.log(args.join(', '))
+    },
+    error(...args: any[]) {
+        //@ts-ignore
+        return logger.error(args.join(', '))
+    }
+}
+
+const SessionData = {
+    //@ts-ignore
+    encounter: new LetheStorage(__encDict), global: new LetheStorage(__gloDict),
+}

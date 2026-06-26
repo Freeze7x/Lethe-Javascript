@@ -19,7 +19,7 @@ public class Main : BasePlugin
 {
     public const string GUID = $"{AUTHOR}.{NAME}";
     public const string NAME = "LetheJavascript";
-    public const string VERSION = "1.0.0";
+    public const string VERSION = "0.0.1";
     public const string AUTHOR = "Freeze";
 
     public static ManualLogSource Logger;
